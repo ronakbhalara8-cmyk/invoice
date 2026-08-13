@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation';
 export default function Navbar({ user, onMenuClick }) {
   const pathname = usePathname();
   const organizationName = user?.organizationName || user?.company_name || user?.name || 'Organization';
+  const userEmail = user?.email || 'N/A';
 
   const getPageTitle = () => {
     switch (pathname) {
@@ -49,19 +50,17 @@ export default function Navbar({ user, onMenuClick }) {
               <span className="absolute top-1 right-1 block h-2 w-2 rounded-full bg-red-400"></span>
             </button>
 
-            {/* Profile info (Static) */}
+            {/* Profile info */}
             <div className="relative">
-              <div
-                className="flex items-center space-x-3 p-2 rounded-lg"
-              >
+              <div className="flex items-center space-x-3 p-2 rounded-lg">
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 shadow-sm">
                   <span className="text-sm font-bold text-white">
-                    {organizationName.charAt(0).toUpperCase() || 'U'}
+                    {organizationName?.charAt(0).toUpperCase() || 'U'}
                   </span>
                 </div>
                 <div className="hidden md:block text-left">
                   <p className="text-sm font-semibold text-slate-800">{organizationName}</p>
-                  <p className="text-xs text-slate-500">{user?.email || 'user@example.com'}</p>
+                  <p className="text-xs text-slate-500">{userEmail}</p>
                 </div>
               </div>
             </div>

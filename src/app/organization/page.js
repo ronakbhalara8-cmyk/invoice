@@ -2,9 +2,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'react-toastify';
 
 export default function OrganizationPage() {
+    const router = useRouter();
+    const searchParams = useSearchParams();
     const [countries, setCountries] = useState([]);
     const [states, setStates] = useState([]);
     const [loading, setLoading] = useState({
@@ -67,6 +70,58 @@ export default function OrganizationPage() {
     // Fetch countries on component mount
     useEffect(() => {
         fetchCountries();
+    }, []);
+
+    // Load organization name and other data from query parameters
+    useEffect(() => {
+        if (!searchParams) return;
+
+        const queryName = searchParams.get('name');
+        const queryEmail = searchParams.get('email');
+        const queryCountry = searchParams.get('country');
+        const queryPhone = searchParams.get('phone');
+
+        if (queryName) {
+            const decodedName = decodeURIComponent(queryName);
+            setFormData(prev => ({
+                ...prev,
+                organizationName: decodedName
+            }));
+            setWelcomeName(decodedName);
+        }
+
+        // Log query parameters for debugging
+        if (queryName || queryEmail || queryCountry || queryPhone) {
+            console.log('Query parameters received:', {
+                name: queryName,
+                email: queryEmail,
+                country: queryCountry,
+                phone: queryPhone
+            });
+        }
+    }, [searchParams]);
+
+    // Ensure the signup data still exists before allowing this step.
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+
+        try {
+            const raw = sessionStorage.getItem('pendingRegistration');
+            if (!raw) {
+                throw new Error('Missing pending registration data');
+            }
+
+            const parsed = JSON.parse(raw);
+            const hasIdentity = parsed && (parsed.email || parsed.companyName || parsed.name);
+            if (!hasIdentity) {
+                throw new Error('Invalid pending registration data');
+            }
+        } catch (error) {
+            console.error('Registration session missing. Redirecting to signup:', error);
+            sessionStorage.removeItem('pendingRegistration');
+            toast.error('Registration session expired. Please sign up again.');
+            window.location.replace('/');
+        }
     }, []);
 
     // Load pending registration (stored by the signup page)
@@ -334,9 +389,9 @@ export default function OrganizationPage() {
             sessionStorage.setItem('currentUser', JSON.stringify(profile));
             sessionStorage.removeItem('pendingRegistration');
             toast.success('Profile created successfully! Redirecting to dashboard...');
-            setTimeout(() => {
-                window.location.href = '/dashboard';
-            }, 500);
+
+            // Use Next.js router for proper client-side navigation with middleware check
+            router.push('/dashboard');
 
         } catch (error) {
             console.error('Error submitting form:', error);
@@ -418,7 +473,6 @@ export default function OrganizationPage() {
                                     type="text"
                                     className={`w-full px-4 py-2.5 ${errors.country ? 'border-red-500' : 'border-gray-300'} border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-white/50 backdrop-blur-sm`}
                                     placeholder="Enter organization name"
-                                    value={formData.organizationName}
                                     onChange={(e) => handleInputChange('organizationName', e.target.value)}
                                     disabled={loading.submit}
                                 />

@@ -1,6 +1,14 @@
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
+import jwt from 'jsonwebtoken';
+import { NextResponse } from 'next/server';
 import db from '../../../lib/db';
+
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+
+function createToken(payload) {
+    return jwt.sign(payload, JWT_SECRET, { expiresIn: '24h' });
+}
 
 export async function POST(request) {
     try {
@@ -98,13 +106,39 @@ export async function POST(request) {
             ];
 
             const orgRes = await client.query(insertOrgQuery, orgValues);
+            const orgId = orgRes.rows[0]?.id;
 
             await client.query('COMMIT');
 
-            return new Response(
-                JSON.stringify({ error: false, data: { userId, orgId: orgRes.rows[0]?.id }, message: 'Registration completed.' }),
-                { status: 201, headers: { 'Content-Type': 'application/json' } }
+            // Create JWT token with userId and organizationId
+            const token = createToken({
+                userId,
+                organizationId: orgId,
+                email: email.trim(),
+            });
+
+            // Return response with Set-Cookie header using NextResponse
+            const response = NextResponse.json(
+                {
+                    error: false,
+                    data: { userId, orgId },
+                    message: 'Registration completed successfully. Redirecting to dashboard...'
+                },
+                { status: 201 }
             );
+
+            // Set secure HTTP-only cookie
+            response.cookies.set({
+                name: 'token',
+                value: token,
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax',
+                maxAge: 86400, // 24 hours
+                path: '/',
+            });
+
+            return response;
         } catch (err) {
             await client.query('ROLLBACK');
             console.error('Complete registration error:', err);

@@ -1,17 +1,51 @@
 "use client";
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
+import {
+  LayoutDashboard,
+  Package,
+  FileText,
+  DollarSign,
+  AlertTriangle,
+  LogOut,
+  ChevronLeft,
+  X
+} from 'lucide-react';
 
 export default function Sidebar({ isOpen, onClose, isCollapsed, onToggle }) {
   const pathname = usePathname();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    try {
+      const response = await fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        toast.success('Logged out successfully');
+        localStorage.removeItem('user');
+        sessionStorage.clear();
+        router.push('/');
+      } else {
+        toast.error('Logout failed. Please try again.');
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+      toast.error('An error occurred during logout');
+    }
+  };
 
   const menuItems = [
-    { name: 'Dashboard', href: '/dashboard', icon: '📊' },
-    { name: 'Stock', href: '/dashboard/stock', icon: '📦' },
-    { name: 'Billing', href: '/dashboard/billing', icon: '🧾' },
-    { name: 'Selling', href: '/dashboard/selling', icon: '💰' },
-    { name: 'Out of Stock', href: '/dashboard/out-of-stock', icon: '⚠️' },
+    { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+    { name: 'Items', href: '/dashboard/item', icon: Package },
+    { name: 'Billing', href: '/dashboard/billing', icon: FileText },
+    { name: 'Selling', href: '/dashboard/selling', icon: DollarSign },
+    { name: 'Out of Stock', href: '/dashboard/out-of-stock', icon: AlertTriangle },
   ];
 
   return (
@@ -44,18 +78,14 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggle }) {
             onClick={onToggle}
             className="hidden lg:flex absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-blue-600 rounded-full items-center justify-center text-white shadow-lg hover:scale-110 transition-transform z-10"
           >
-            <svg className={`w-4 h-4 transition-transform duration-300 ${isCollapsed ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7 7-7" />
-            </svg>
+            <ChevronLeft className={`w-4 h-4 transition-transform duration-300 ${isCollapsed ? 'rotate-180' : ''}`} />
           </button>
 
           <button
             onClick={onClose}
             className="lg:hidden text-white hover:text-blue-400 transition-colors"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <X className="w-6 h-6" />
           </button>
         </div>
 
@@ -63,6 +93,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggle }) {
           <div className="space-y-2">
             {menuItems.map((item) => {
               const isActive = pathname === item.href;
+              const Icon = item.icon;
               return (
                 <Link
                   key={item.name}
@@ -76,9 +107,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggle }) {
                     }
                   `}
                 >
-                  <span className={`text-xl ${isCollapsed ? 'mr-0' : 'mr-3'} transition-all group-hover:scale-110`}>
-                    {item.icon}
-                  </span>
+                  <Icon className={`w-5 h-5 ${isCollapsed ? 'mr-0' : 'mr-3'} transition-all group-hover:scale-110`} />
                   {!isCollapsed ? (
                     <span className="whitespace-nowrap animate-in fade-in slide-in-from-left-1">
                       {item.name}
@@ -99,13 +128,12 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggle }) {
 
         <div className="border-t border-slate-800 bg-slate-950 p-3 shrink-0">
           <button
+            onClick={handleLogout}
             className={`
               flex items-center ${isCollapsed ? 'justify-center px-0' : 'px-4'} py-3 text-sm font-medium bg-blue-600 text-white cursor-pointer rounded-xl transition-all w-full text-left hover:bg-blue-500 active:scale-95 group relative hover:z-70
             `}
           >
-            <svg className={`w-5 h-5 ${isCollapsed ? 'mr-0' : 'mr-3'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
+            <LogOut className={`w-5 h-5 ${isCollapsed ? 'mr-0' : 'mr-3'}`} />
             {!isCollapsed ? (
               <span className="animate-in fade-in slide-in-from-left-1">Logout</span>
             ) : (
