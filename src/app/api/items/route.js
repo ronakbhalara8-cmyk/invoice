@@ -24,6 +24,33 @@ async function getOrganizationFromToken(request) {
     }
 }
 
+// Helper function to get upload directory
+function getUploadDir() {
+    // Vercel/Production: use /tmp, Local: use public/uploads
+    const isProduction = process.env.NODE_ENV === 'production';
+    const baseDir = isProduction ? '/tmp' : path.join(process.cwd(), 'public');
+    const uploadDir = path.join(baseDir, 'uploads', 'items');
+    
+    // Create directory if it doesn't exist
+    if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    
+    return uploadDir;
+}
+
+// Helper function to get public URL for image
+function getImageUrl(filename) {
+    const isProduction = process.env.NODE_ENV === 'production';
+    if (isProduction) {
+        // For Vercel, we need to serve from /tmp via API route
+        return `/api/uploads/items/${filename}`;
+    } else {
+        // For local development
+        return `/uploads/items/${filename}`;
+    }
+}
+
 // GET - Fetch all items for the authenticated organization
 export async function GET(request) {
     try {
@@ -151,6 +178,8 @@ export async function POST(request) {
         }
 
         let imagePath = null;
+        let imageUrl = null;
+        
         if (image && image.size > 0) {
             // Validate file type
             const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
@@ -169,19 +198,31 @@ export async function POST(request) {
                 );
             }
 
-            const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'items');
-            if (!fs.existsSync(uploadDir)) {
-                fs.mkdirSync(uploadDir, { recursive: true });
+            try {
+                // Get upload directory based on environment
+                const uploadDir = getUploadDir();
+                const timestamp = Date.now();
+                const ext = path.extname(image.name);
+                const filename = `${timestamp}${ext}`;
+                const filePath = path.join(uploadDir, filename);
+
+                // Save file
+                const buffer = Buffer.from(await image.arrayBuffer());
+                fs.writeFileSync(filePath, buffer);
+
+                // Store relative path in database
+                imagePath = `/uploads/items/${filename}`;
+                imageUrl = getImageUrl(filename);
+
+                console.log(`File saved successfully: ${filePath}`);
+                
+            } catch (fileError) {
+                console.error('File save error:', fileError);
+                return NextResponse.json(
+                    { success: false, message: 'Failed to save image file' },
+                    { status: 500 }
+                );
             }
-
-            const timestamp = Date.now();
-            const ext = path.extname(image.name);
-            const filename = `${timestamp}${ext}`;
-            const filePath = path.join(uploadDir, filename);
-
-            const buffer = Buffer.from(await image.arrayBuffer());
-            fs.writeFileSync(filePath, buffer);
-            imagePath = `/uploads/items/${filename}`;
         }
 
         const client = await db.connect();
@@ -210,7 +251,7 @@ export async function POST(request) {
             `;
 
             const values = [
-                auth.organizationId,  // Only organization_id, no user_id
+                auth.organizationId,
                 name.trim(),
                 description.trim(),
                 price,
@@ -220,9 +261,15 @@ export async function POST(request) {
 
             const result = await client.query(query, values);
 
+            // Add full image URL to response
+            const responseData = result.rows[0];
+            if (responseData.image && imageUrl) {
+                responseData.imageUrl = imageUrl;
+            }
+
             return NextResponse.json({
                 success: true,
-                data: result.rows[0],
+                data: responseData,
                 message: 'Item created successfully'
             }, { status: 201 });
 

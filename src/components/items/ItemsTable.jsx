@@ -100,6 +100,28 @@ export default function ItemsTable({
     return `₹${num.toFixed(2)}`;
   };
 
+  // ✅ Event handlers with stopPropagation
+  const handleEditClick = (e, item) => {
+    e.stopPropagation(); // Prevent row click
+    onEditClick(item);
+  };
+
+  const handleDeleteClick = (e, item) => {
+    e.stopPropagation(); // Prevent row click
+    onDeleteClick(item);
+  };
+
+  const handleRowClick = (item) => {
+    onItemClick(item);
+  };
+
+  // ✅ Handle More button click
+  const handleMoreClick = (e) => {
+    e.stopPropagation(); // Prevent row click
+    // Add your more options logic here
+    console.log('More options clicked');
+  };
+
   return (
     <div className="min-h-screen font-sans bg-gray-50">
       {/* Header */}
@@ -191,7 +213,11 @@ export default function ItemsTable({
                 </tr>
               ) : currentItems.length > 0 ? (
                 currentItems.map((item, index) => (
-                  <tr key={item.id} onClick={() => onItemClick(item)} className="hover:bg-gray-50/60 transition-colors group">
+                  <tr 
+                    key={item.id} 
+                    onClick={() => handleRowClick(item)} 
+                    className="hover:bg-gray-50/60 transition-colors group cursor-pointer"
+                  >
                     <td className="px-4 py-3 text-sm text-gray-400 font-mono">
                       {startIndex + index + 1}
                     </td>
@@ -232,19 +258,30 @@ export default function ItemsTable({
                     </td>
                     <td className="px-4 py-3 text-center">
                       <div className="flex items-center justify-center gap-1">
+                        {/* ✅ Edit Button with stopPropagation */}
                         <button 
-                          onClick={() => onEditClick(item)}
+                          onClick={(e) => handleEditClick(e, item)}
                           className="p-1.5 rounded-md hover:bg-blue-50 text-gray-400 hover:text-blue-600 transition-colors"
+                          title="Edit item"
                         >
                           <Edit size={15} />
                         </button>
+                        
+                        {/* ✅ Delete Button with stopPropagation */}
                         <button 
-                          onClick={() => onDeleteClick(item)}
+                          onClick={(e) => handleDeleteClick(e, item)}
                           className="p-1.5 rounded-md hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors"
+                          title="Delete item"
                         >
                           <Trash2 size={15} />
                         </button>
-                        <button className="p-1.5 rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
+                        
+                        {/* ✅ More Button with stopPropagation */}
+                        <button 
+                          onClick={(e) => handleMoreClick(e)}
+                          className="p-1.5 rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+                          title="More options"
+                        >
                           <MoreHorizontal size={15} />
                         </button>
                       </div>

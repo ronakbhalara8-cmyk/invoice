@@ -24,6 +24,45 @@ async function getOrganizationFromToken(request) {
     }
 }
 
+// Helper function to get upload directory (Local + Vercel compatible)
+function getUploadDir() {
+    const isProduction = process.env.NODE_ENV === 'production';
+    const baseDir = isProduction ? '/tmp' : path.join(process.cwd(), 'public');
+    const uploadDir = path.join(baseDir, 'uploads', 'items');
+    
+    if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    
+    return uploadDir;
+}
+
+// Helper function to delete image file
+function deleteImageFile(imagePath) {
+    if (!imagePath) return;
+    
+    try {
+        const isProduction = process.env.NODE_ENV === 'production';
+        let fullPath;
+        
+        if (isProduction) {
+            // In Vercel, images are in /tmp
+            const filename = path.basename(imagePath);
+            fullPath = path.join('/tmp', 'uploads', 'items', filename);
+        } else {
+            // In local development
+            fullPath = path.join(process.cwd(), 'public', imagePath);
+        }
+        
+        if (fs.existsSync(fullPath)) {
+            fs.unlinkSync(fullPath);
+            console.log(`Deleted image: ${fullPath}`);
+        }
+    } catch (error) {
+        console.error('Error deleting image:', error);
+    }
+}
+
 // Helper function to check if item exists and belongs to organization
 async function getItemByIdAndOrganization(itemId, organizationId) {
     const client = await db.connect();
@@ -39,9 +78,44 @@ async function getItemByIdAndOrganization(itemId, organizationId) {
     }
 }
 
+// Helper function to save image
+async function saveImage(image, existingImagePath = null) {
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
+    if (!allowedTypes.includes(image.type)) {
+        throw new Error('Invalid file type. Allowed: JPEG, PNG, WEBP');
+    }
+
+    // Validate file size (max 5MB)
+    if (image.size > 5 * 1024 * 1024) {
+        throw new Error('File size must be less than 5MB');
+    }
+
+    // Delete old image if exists
+    if (existingImagePath) {
+        deleteImageFile(existingImagePath);
+    }
+
+    // Save new image
+    const uploadDir = getUploadDir();
+    const timestamp = Date.now();
+    const ext = path.extname(image.name);
+    const filename = `${timestamp}${ext}`;
+    const filePath = path.join(uploadDir, filename);
+
+    const buffer = Buffer.from(await image.arrayBuffer());
+    fs.writeFileSync(filePath, buffer);
+
+    // Return relative path for database
+    return `/uploads/items/${filename}`;
+}
+
 // GET - Fetch single item
 export async function GET(request, { params }) {
     try {
+        // ✅ FIX: Await params (Next.js 15 requirement)
+        const { id } = await params;
+        
         const auth = await getOrganizationFromToken(request);
         if (!auth) {
             return NextResponse.json(
@@ -50,7 +124,6 @@ export async function GET(request, { params }) {
             );
         }
 
-        const { id } = params;
         const item = await getItemByIdAndOrganization(id, auth.organizationId);
 
         if (!item) {
@@ -77,6 +150,9 @@ export async function GET(request, { params }) {
 // PUT - Update item
 export async function PUT(request, { params }) {
     try {
+        // ✅ FIX: Await params (Next.js 15 requirement)
+        const { id } = await params;
+        
         const auth = await getOrganizationFromToken(request);
         if (!auth) {
             return NextResponse.json(
@@ -85,7 +161,6 @@ export async function PUT(request, { params }) {
             );
         }
 
-        const { id } = params;
         const formData = await request.formData();
         const name = formData.get('name');
         const description = formData.get('description') || '';
@@ -118,47 +193,18 @@ export async function PUT(request, { params }) {
             );
         }
 
-        let imagePath = existingImage;
+        let imagePath = existingImage || existingItem.image;
 
         // Handle image upload
         if (image && image.size > 0) {
-            // Validate file type
-            const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
-            if (!allowedTypes.includes(image.type)) {
+            try {
+                imagePath = await saveImage(image, existingItem.image);
+            } catch (uploadError) {
                 return NextResponse.json(
-                    { success: false, message: 'Invalid file type. Allowed: JPEG, PNG, WEBP' },
+                    { success: false, message: uploadError.message },
                     { status: 400 }
                 );
             }
-
-            if (image.size > 5 * 1024 * 1024) {
-                return NextResponse.json(
-                    { success: false, message: 'File size must be less than 5MB' },
-                    { status: 400 }
-                );
-            }
-
-            // Delete old image if exists
-            if (existingItem.image) {
-                const oldImagePath = path.join(process.cwd(), 'public', existingItem.image);
-                if (fs.existsSync(oldImagePath)) {
-                    fs.unlinkSync(oldImagePath);
-                }
-            }
-
-            const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'items');
-            if (!fs.existsSync(uploadDir)) {
-                fs.mkdirSync(uploadDir, { recursive: true });
-            }
-
-            const timestamp = Date.now();
-            const ext = path.extname(image.name);
-            const filename = `${timestamp}${ext}`;
-            const filePath = path.join(uploadDir, filename);
-
-            const buffer = Buffer.from(await image.arrayBuffer());
-            fs.writeFileSync(filePath, buffer);
-            imagePath = `/uploads/items/${filename}`;
         }
 
         const client = await db.connect();
@@ -192,7 +238,7 @@ export async function PUT(request, { params }) {
                 status,
                 imagePath,
                 id,
-                auth.organizationId  // Only organization_id check, no user_id
+                auth.organizationId
             ];
 
             const result = await client.query(query, values);
@@ -226,6 +272,9 @@ export async function PUT(request, { params }) {
 // DELETE - Delete item
 export async function DELETE(request, { params }) {
     try {
+        // ✅ FIX: Await params (Next.js 15 requirement)
+        const { id } = await params;
+        
         const auth = await getOrganizationFromToken(request);
         if (!auth) {
             return NextResponse.json(
@@ -233,8 +282,6 @@ export async function DELETE(request, { params }) {
                 { status: 401 }
             );
         }
-
-        const { id } = params;
 
         // Check if item exists and get image path
         const existingItem = await getItemByIdAndOrganization(id, auth.organizationId);
@@ -265,10 +312,7 @@ export async function DELETE(request, { params }) {
 
             // Delete image file if exists
             if (existingItem.image) {
-                const imagePath = path.join(process.cwd(), 'public', existingItem.image);
-                if (fs.existsSync(imagePath)) {
-                    fs.unlinkSync(imagePath);
-                }
+                deleteImageFile(existingItem.image);
             }
 
             return NextResponse.json({

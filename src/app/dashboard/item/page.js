@@ -17,6 +17,9 @@ export default function ItemsPage() {
   const [modalMode, setModalMode] = useState('add');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  
+  // ✅ Track if modal was opened from table (not from sidebar)
+  const [isFromTable, setIsFromTable] = useState(false);
 
   // Fetch items
   useEffect(() => {
@@ -40,48 +43,70 @@ export default function ItemsPage() {
 
   const handleAddItem = (newItem) => {
     setItems(prev => [...prev, newItem]);
+    // ✅ Close modal and DON'T open sidebar
+    setIsModalOpen(false);
+    setSelectedItem(null);
+    setIsFromTable(false);
   };
 
   const handleUpdateItem = (updatedItem) => {
     setItems(prev => prev.map(item => 
       item.id === updatedItem.id ? updatedItem : item
     ));
-    // Close sidebar if the updated item is currently selected
+    // ✅ Update selected item if sidebar is open
     if (selectedItem?.id === updatedItem.id) {
       setSelectedItem(updatedItem);
     }
-  };
-
-  const handleDeleteItem = (itemId) => {
-    setItems(prev => prev.filter(item => item.id !== itemId));
-    if (selectedItem?.id === itemId) {
+    // ✅ Close modal and DON'T open sidebar if from table
+    if (isFromTable) {
+      setIsModalOpen(false);
+      setIsFromTable(false);
+      // ✅ Keep sidebar closed
       setIsSidebarOpen(false);
       setSelectedItem(null);
     }
   };
 
+  const handleDeleteItem = (itemId) => {
+    setItems(prev => prev.filter(item => item.id !== itemId));
+    // ✅ Close everything
+    setIsDeleteModalOpen(false);
+    setIsSidebarOpen(false);
+    setSelectedItem(null);
+    setIsFromTable(false);
+  };
+
+  // ✅ Open Add Modal from Table
   const openAddModal = () => {
+    setIsFromTable(true); // ✅ Mark as from table
     setSelectedItem(null);
     setModalMode('add');
     setIsModalOpen(true);
+    setIsSidebarOpen(false); // ✅ Close sidebar if open
   };
 
-  const openEditModal = (item) => {
+  // ✅ Open Edit Modal from Table or Sidebar
+  const openEditModal = (item, fromTable = true) => {
+    setIsFromTable(fromTable); // ✅ Track source
     setSelectedItem(item);
     setModalMode('edit');
     setIsModalOpen(true);
-    // Close sidebar when opening edit modal
-    setIsSidebarOpen(false);
+    // ✅ If from table, close sidebar
+    if (fromTable) {
+      setIsSidebarOpen(false);
+    }
   };
 
+  // ✅ Open Sidebar (only from table row click)
   const openSidebar = (item) => {
     setSelectedItem(item);
     setIsSidebarOpen(true);
+    setIsFromTable(false); // ✅ Reset flag
   };
 
+  // ✅ Close Sidebar
   const closeSidebar = () => {
     setIsSidebarOpen(false);
-    // Don't clear selectedItem immediately to allow for smooth transition
     setTimeout(() => {
       if (!isModalOpen && !isDeleteModalOpen) {
         setSelectedItem(null);
@@ -89,9 +114,29 @@ export default function ItemsPage() {
     }, 300);
   };
 
+  // ✅ Open Delete Modal
   const openDeleteModal = (item) => {
+    setIsFromTable(true); // ✅ Mark as from table
     setSelectedItem(item);
     setIsDeleteModalOpen(true);
+    setIsSidebarOpen(false); // ✅ Close sidebar if open
+  };
+
+  // ✅ Modal Close Handler - FIXED
+  const handleModalClose = () => {
+    setIsModalOpen(false);
+    setSelectedItem(null);
+    setIsFromTable(false);
+    // ✅ DO NOT open sidebar - keep it closed
+    setIsSidebarOpen(false);
+  };
+
+  // ✅ Delete Modal Close Handler - FIXED
+  const handleDeleteModalClose = () => {
+    setIsDeleteModalOpen(false);
+    setSelectedItem(null);
+    setIsFromTable(false);
+    // ✅ DO NOT open sidebar - keep it closed
     setIsSidebarOpen(false);
   };
 
@@ -101,20 +146,14 @@ export default function ItemsPage() {
         items={items}
         loading={loading}
         onAddClick={openAddModal}
-        onEditClick={openEditModal}
+        onEditClick={(item) => openEditModal(item, true)} // ✅ fromTable = true
         onDeleteClick={openDeleteModal}
         onItemClick={openSidebar}
       />
 
       <ItemModal 
         isOpen={isModalOpen}
-        onClose={() => {
-          setIsModalOpen(false);
-          // Reopen sidebar if we were viewing an item
-          if (selectedItem && !isDeleteModalOpen) {
-            setIsSidebarOpen(true);
-          }
-        }}
+        onClose={handleModalClose}
         item={selectedItem}
         mode={modalMode}
         onItemAdded={handleAddItem}
@@ -125,18 +164,12 @@ export default function ItemsPage() {
         isOpen={isSidebarOpen}
         onClose={closeSidebar}
         item={selectedItem}
-        onEdit={openEditModal}
+        onEdit={(item) => openEditModal(item, false)} // ✅ fromTable = false (from sidebar)
       />
 
       <DeleteConfirmModal 
         isOpen={isDeleteModalOpen}
-        onClose={() => {
-          setIsDeleteModalOpen(false);
-          // Reopen sidebar if we were viewing an item
-          if (selectedItem && !isModalOpen) {
-            setIsSidebarOpen(true);
-          }
-        }}
+        onClose={handleDeleteModalClose}
         item={selectedItem}
         onItemDeleted={handleDeleteItem}
       />
