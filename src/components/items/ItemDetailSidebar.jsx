@@ -130,13 +130,6 @@ export default function ItemDetailSidebar({isOpen, onClose, item, onEdit}) {
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             <button
-              onClick={handleEdit}
-              className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-all duration-200 text-white"
-              aria-label="Edit item"
-            >
-              <Edit className="w-4 h-4" />
-            </button>
-            <button
               onClick={handleClose}
               className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-all duration-200 text-white"
               aria-label="Close sidebar"
@@ -210,23 +203,6 @@ export default function ItemDetailSidebar({isOpen, onClose, item, onEdit}) {
                 </p>
               </div>
             </div>
-          </div>
-
-          {/* Quick Actions */}
-          <div className="flex gap-3 pt-2">
-            <button
-              onClick={handleEdit}
-              className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200 font-medium shadow-lg shadow-blue-600/20 hover:shadow-blue-600/30 flex items-center justify-center gap-2"
-            >
-              <Edit className="w-4 h-4" />
-              Edit Item
-            </button>
-            <button
-              onClick={handleClose}
-              className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-all duration-200 font-medium"
-            >
-              Close
-            </button>
           </div>
         </div>
       </div>
