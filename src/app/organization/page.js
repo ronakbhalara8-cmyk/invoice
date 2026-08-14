@@ -1,11 +1,11 @@
 // app/organization/page.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'react-toastify';
 
-export default function OrganizationPage() {
+function OrganizationPageContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const [countries, setCountries] = useState([]);
@@ -723,5 +723,17 @@ export default function OrganizationPage() {
                 </div>
             </div >
         </div >
+    );
+}
+
+export default function OrganizationPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-[#f4f5f7] flex items-center justify-center text-slate-600">
+                Loading organization setup...
+            </div>
+        }>
+            <OrganizationPageContent />
+        </Suspense>
     );
 }
