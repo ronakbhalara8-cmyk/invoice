@@ -75,7 +75,7 @@ export default function ItemDetailSidebar({isOpen, onClose, item, onEdit}) {
         dotColor: 'bg-emerald-500'
       },
       'Inactive': {
-        color: 'bg-red-50 text-red-700 border-red-200',
+        color: 'text-red-700',
         icon: '●',
         dotColor: 'bg-red-500'
       },
@@ -115,7 +115,7 @@ export default function ItemDetailSidebar({isOpen, onClose, item, onEdit}) {
       {/* Sidebar with slide animation */}
       <div
         ref={sidebarRef}
-        className={`fixed top-0 right-0 h-full w-full max-w-md bg-white shadow-2xl z-50 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${isOpen && !isClosing ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'
+        className={`fixed top-0 font-sans right-0 h-full w-full max-w-md bg-white shadow-2xl z-50 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${isOpen && !isClosing ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'
           }`}
       >
         {/* Header */}
