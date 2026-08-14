@@ -1,12 +1,14 @@
 "use client";
 
-import { Plus, ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, Search, Edit, Trash2, MoreHorizontal, Filter, Download } from "lucide-react";
 import { useState } from "react";
 
 export default function Items() {
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [searchTerm, setSearchTerm] = useState("");
+    const [selectedItems, setSelectedItems] = useState([]);
+    const [sortConfig, setSortConfig] = useState(null);
 
     // Sample data - replace with your actual data
     const items = [
@@ -43,12 +45,32 @@ export default function Items() {
         item.category.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
+    // Sort items
+    const sortedItems = [...filteredItems];
+    if (sortConfig) {
+        sortedItems.sort((a, b) => {
+            const aValue = a;
+            const bValue = b;
+            if (typeof aValue === 'string' && typeof bValue === 'string') {
+                return sortConfig.direction === 'asc' 
+                    ? aValue.localeCompare(bValue) 
+                    : bValue.localeCompare(aValue);
+            }
+            if (typeof aValue === 'number' && typeof bValue === 'number') {
+                return sortConfig.direction === 'asc' 
+                    ? aValue - bValue 
+                    : bValue - aValue;
+            }
+            return 0;
+        });
+    }
+
     // Calculate pagination
-    const totalItems = filteredItems.length;
+    const totalItems = sortedItems.length;
     const totalPages = Math.ceil(totalItems / rowsPerPage);
     const startIndex = (currentPage - 1) * rowsPerPage;
     const endIndex = startIndex + rowsPerPage;
-    const currentItems = filteredItems.slice(startIndex, endIndex);
+    const currentItems = sortedItems.slice(startIndex, endIndex);
 
     // Handle page change
     const handlePageChange = (page) => {
@@ -63,34 +85,79 @@ export default function Items() {
         setCurrentPage(1);
     };
 
+    // Handle sort
+    const handleSort = (key) => {
+        setSortConfig(prev => {
+            if (prev?.key === key) {
+                return prev.direction === 'asc' 
+                    ? { key, direction: 'desc' } 
+                    : null;
+            }
+            return { key, direction: 'asc' };
+        });
+    };
+
+    // Handle select all
+    const handleSelectAll = () => {
+        if (selectedItems.length === currentItems.length) {
+            setSelectedItems([]);
+        } else {
+            setSelectedItems(currentItems.map(item => item.id));
+        }
+    };
+
+    // Handle select one
+    const handleSelectOne = (id) => {
+        setSelectedItems(prev => 
+            prev.includes(id) 
+                ? prev.filter(itemId => itemId !== id)
+                : [...prev, id]
+        );
+    };
+
     // Get status color
     const getStatusColor = (status) => {
         switch (status) {
             case "In Stock":
-                return "bg-green-100 text-green-800";
+                return "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-600/20";
             case "Out of Stock":
-                return "bg-red-100 text-red-800";
+                return "bg-rose-50 text-rose-700 ring-1 ring-rose-600/20";
             case "Low Stock":
-                return "bg-yellow-100 text-yellow-800";
+                return "bg-amber-50 text-amber-700 ring-1 ring-amber-600/20";
             default:
-                return "bg-gray-100 text-gray-800";
+                return "bg-gray-50 text-gray-700 ring-1 ring-gray-600/20";
         }
     };
 
+    // Get stock indicator
+    const getStockIndicator = (stock) => {
+        if (stock === 0) return { color: "bg-rose-400", text: "Out" };
+        if (stock < 10) return { color: "bg-amber-400", text: "Low" };
+        return { color: "bg-emerald-400", text: "In" };
+    };
+
     return (
-        <div className="h-full flex flex-col bg-gray-50">
+        <div className="h-full flex flex-col bg-slate-50/80">
             {/* ===== STICKY HEADER ===== */}
-            <div className="sticky top-0 z-30 bg-white border-b border-gray-200 px-6 py-4 shadow-sm">
+            <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-sm border-b border-slate-200/80 px-8 py-5 shadow-sm">
                 <div className="flex items-center justify-between">
                     <div>
-                        <p className="text-2xl font-bold text-gray-900">Items</p>
-                        <p className="text-sm text-gray-500 mt-0.5">
-                            {totalItems} Total • Manage your inventory items
+                        <h1 className="text-2xl font-semibold text-slate-900 tracking-tight">Items</h1>
+                        <p className="text-sm text-slate-500 mt-0.5">
+                            {totalItems} items • Manage your inventory
                         </p>
                     </div>
-                    <div className="flex items-center gap-x-4">
+                    <div className="flex items-center gap-x-3">
+                        <button className="flex items-center gap-2 px-3.5 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-200 transition-all">
+                            <Download size={16} />
+                            Export
+                        </button>
+                        <button className="flex items-center gap-2 px-3.5 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-200 transition-all">
+                            <Filter size={16} />
+                            Filter
+                        </button>
                         <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                             <input
                                 type="text"
                                 placeholder="Search items..."
@@ -99,10 +166,10 @@ export default function Items() {
                                     setSearchTerm(e.target.value);
                                     setCurrentPage(1);
                                 }}
-                                className="pl-10 pr-4 py-2 w-72 rounded-lg border border-gray-300 bg-white text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                                className="pl-10 pr-4 py-2 w-72 rounded-lg border border-slate-200 bg-white text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                             />
                         </div>
-                        <button className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors">
+                        <button className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all shadow-sm shadow-blue-600/20">
                             <Plus size={18} />
                             New Item
                         </button>
@@ -111,34 +178,82 @@ export default function Items() {
             </div>
 
             {/* ===== TABLE CONTAINER ===== */}
-            <div className="flex-1 flex flex-col min-h-0 mx-6 my-4 bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+            <div className="flex-1 flex flex-col min-h-0 mx-8 my-5 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
 
                 {/* ===== STICKY TABLE HEADER ===== */}
-                <div className="sticky top-[73px] z-20 bg-gray-50 border-b border-gray-200">
+                <div className="sticky top-[73px] z-20 bg-slate-50/95 backdrop-blur-sm border-b border-slate-200">
                     <div className="px-4">
                         <table className="w-full">
                             <thead>
                                 <tr>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap w-12">
+                                    <th className="px-4 py-3.5 w-10">
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedItems.length === currentItems.length && currentItems.length > 0}
+                                            onChange={handleSelectAll}
+                                            className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 focus:ring-offset-0 cursor-pointer"
+                                        />
+                                    </th>
+                                    <th className="px-4 py-3.5 text-left text-xs font-medium text-slate-500 uppercase tracking-wider cursor-pointer hover:text-slate-700 transition-colors select-none w-12">
                                         #
                                     </th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
-                                        ITEM NAME
+                                    <th 
+                                        className="px-4 py-3.5 text-left text-xs font-medium text-slate-500 uppercase tracking-wider cursor-pointer hover:text-slate-700 transition-colors select-none"
+                                        onClick={() => handleSort('name')}
+                                    >
+                                        <div className="flex items-center gap-1">
+                                            Item Name
+                                            {sortConfig?.key === 'name' && (
+                                                <span className="text-slate-400">
+                                                    {sortConfig.direction === 'asc' ? '↑' : '↓'}
+                                                </span>
+                                            )}
+                                        </div>
                                     </th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
-                                        CATEGORY
+                                    <th 
+                                        className="px-4 py-3.5 text-left text-xs font-medium text-slate-500 uppercase tracking-wider cursor-pointer hover:text-slate-700 transition-colors select-none"
+                                        onClick={() => handleSort('category')}
+                                    >
+                                        <div className="flex items-center gap-1">
+                                            Category
+                                            {sortConfig?.key === 'category' && (
+                                                <span className="text-slate-400">
+                                                    {sortConfig.direction === 'asc' ? '↑' : '↓'}
+                                                </span>
+                                            )}
+                                        </div>
                                     </th>
-                                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
-                                        PRICE
+                                    <th 
+                                        className="px-4 py-3.5 text-right text-xs font-medium text-slate-500 uppercase tracking-wider cursor-pointer hover:text-slate-700 transition-colors select-none"
+                                        onClick={() => handleSort('price')}
+                                    >
+                                        <div className="flex items-center justify-end gap-1">
+                                            Price
+                                            {sortConfig?.key === 'price' && (
+                                                <span className="text-slate-400">
+                                                    {sortConfig.direction === 'asc' ? '↑' : '↓'}
+                                                </span>
+                                            )}
+                                        </div>
                                     </th>
-                                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
-                                        STOCK
+                                    <th 
+                                        className="px-4 py-3.5 text-center text-xs font-medium text-slate-500 uppercase tracking-wider cursor-pointer hover:text-slate-700 transition-colors select-none"
+                                        onClick={() => handleSort('stock')}
+                                    >
+                                        <div className="flex items-center justify-center gap-1">
+                                            Stock
+                                            {sortConfig?.key === 'stock' && (
+                                                <span className="text-slate-400">
+                                                    {sortConfig.direction === 'asc' ? '↑' : '↓'}
+                                                </span>
+                                            )}
+                                        </div>
                                     </th>
-                                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
-                                        STATUS
+                                    <th className="px-4 py-3.5 text-center text-xs font-medium text-slate-500 uppercase tracking-wider select-none">
+                                        Status
                                     </th>
-                                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
-                                        ACTION
+                                    <th className="px-4 py-3.5 text-center text-xs font-medium text-slate-500 uppercase tracking-wider select-none w-24">
+                                        Actions
                                     </th>
                                 </tr>
                             </thead>
@@ -150,44 +265,87 @@ export default function Items() {
                 <div className="flex-1 overflow-auto">
                     <div className="px-4">
                         <table className="w-full">
-                            <tbody className="divide-y divide-gray-200">
+                            <tbody className="divide-y divide-slate-100">
                                 {currentItems.length > 0 ? (
-                                    currentItems.map((item, index) => (
-                                        <tr key={item.id} className="hover:bg-gray-50 transition-colors">
-                                            <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap w-12">
-                                                {startIndex + index + 1}
-                                            </td>
-                                            <td className="px-4 py-3 text-sm font-medium text-gray-900 whitespace-nowrap">
-                                                {item.name}
-                                            </td>
-                                            <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
-                                                {item.category}
-                                            </td>
-                                            <td className="px-4 py-3 text-sm text-gray-900 text-right whitespace-nowrap">
-                                                ${item.price.toFixed(2)}
-                                            </td>
-                                            <td className="px-4 py-3 text-sm text-gray-600 text-center whitespace-nowrap">
-                                                {item.stock}
-                                            </td>
-                                            <td className="px-4 py-3 text-center whitespace-nowrap">
-                                                <span className={`inline-flex px-2.5 py-0.5 text-xs font-medium rounded-full ${getStatusColor(item.status)}`}>
-                                                    {item.status}
-                                                </span>
-                                            </td>
-                                            <td className="px-4 py-3 text-center whitespace-nowrap">
-                                                <button className="text-blue-600 hover:text-blue-800 font-medium text-sm transition-colors">
-                                                    Edit
-                                                </button>
-                                                <button className="ml-4 text-red-600 hover:text-red-800 font-medium text-sm transition-colors">
-                                                    Delete
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))
+                                    currentItems.map((item, index) => {
+                                        const stockIndicator = getStockIndicator(item.stock);
+                                        return (
+                                            <tr 
+                                                key={item.id} 
+                                                className="hover:bg-slate-50/60 transition-colors group"
+                                            >
+                                                <td className="px-4 py-3.5 w-10">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={selectedItems.includes(item.id)}
+                                                        onChange={() => handleSelectOne(item.id)}
+                                                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 focus:ring-offset-0 cursor-pointer"
+                                                    />
+                                                </td>
+                                                <td className="px-4 py-3.5 text-sm text-slate-400 font-mono whitespace-nowrap w-12">
+                                                    {startIndex + index + 1}
+                                                </td>
+                                                <td className="px-4 py-3.5 whitespace-nowrap">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center text-blue-600 text-xs font-semibold">
+                                                            {item.name.charAt(0)}
+                                                        </div>
+                                                        <span className="text-sm font-medium text-slate-900">
+                                                            {item.name}
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-3.5 whitespace-nowrap">
+                                                    <span className="inline-flex px-2.5 py-0.5 text-xs font-medium rounded-md bg-slate-100 text-slate-700">
+                                                        {item.category}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-3.5 text-sm text-slate-900 text-right whitespace-nowrap font-medium">
+                                                    ${item.price.toFixed(2)}
+                                                </td>
+                                                <td className="px-4 py-3.5 text-center whitespace-nowrap">
+                                                    <div className="flex items-center justify-center gap-2">
+                                                        <div className={`w-1.5 h-1.5 rounded-full ${stockIndicator.color}`} />
+                                                        <span className={`text-sm font-medium ${
+                                                            item.stock === 0 ? 'text-rose-600' :
+                                                            item.stock < 10 ? 'text-amber-600' :
+                                                            'text-emerald-600'
+                                                        }`}>
+                                                            {item.stock}
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-3.5 text-center whitespace-nowrap">
+                                                    <span className={`inline-flex px-3 py-1 text-xs font-medium rounded-full ${getStatusColor(item.status)}`}>
+                                                        {item.status}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-3.5 text-center whitespace-nowrap">
+                                                    <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <button className="p-1.5 rounded-md hover:bg-blue-50 text-slate-400 hover:text-blue-600 transition-colors">
+                                                            <Edit size={15} />
+                                                        </button>
+                                                        <button className="p-1.5 rounded-md hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition-colors">
+                                                            <Trash2 size={15} />
+                                                        </button>
+                                                        <button className="p-1.5 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors">
+                                                            <MoreHorizontal size={15} />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
                                 ) : (
                                     <tr>
-                                        <td colSpan="7" className="px-4 py-12 text-center text-gray-500">
-                                            No items found
+                                        <td colSpan={8} className="px-4 py-16 text-center">
+                                            <div className="flex flex-col items-center gap-2">
+                                                <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center">
+                                                    <Search size={20} className="text-slate-400" />
+                                                </div>
+                                                <p className="text-sm text-slate-500">No items found</p>
+                                                <p className="text-xs text-slate-400">Try adjusting your search or filters</p>
+                                            </div>
                                         </td>
                                     </tr>
                                 )}
@@ -197,14 +355,14 @@ export default function Items() {
                 </div>
 
                 {/* ===== STICKY PAGINATION FOOTER ===== */}
-                <div className="sticky bottom-0 z-20 bg-white border-t border-gray-200 px-4 py-3">
+                <div className="sticky bottom-0 z-20 bg-white/95 backdrop-blur-sm border-t border-slate-200 px-4 py-3">
                     <div className="flex items-center justify-between flex-wrap gap-3">
-                        <div className="flex items-center gap-3 text-sm text-gray-700">
+                        <div className="flex items-center gap-3 text-sm text-slate-600">
                             <span>Rows per page:</span>
                             <select
                                 value={rowsPerPage}
                                 onChange={handleRowsPerPageChange}
-                                className="px-2 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm"
+                                className="px-2.5 py-1.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm cursor-pointer"
                             >
                                 <option value={5}>5</option>
                                 <option value={10}>10</option>
@@ -212,51 +370,51 @@ export default function Items() {
                                 <option value={50}>50</option>
                                 <option value={100}>100</option>
                             </select>
-                            <span className="text-gray-500 hidden sm:inline">
-                                Showing {totalItems === 0 ? '0' : startIndex + 1} - {Math.min(endIndex, totalItems)} of {totalItems} results
+                            <span className="text-slate-500 hidden sm:inline">
+                                Showing {totalItems === 0 ? '0' : startIndex + 1} - {Math.min(endIndex, totalItems)} of {totalItems}
                             </span>
                         </div>
 
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5">
                             <button
                                 onClick={() => handlePageChange(currentPage - 1)}
                                 disabled={currentPage === 1}
-                                className={`p-2 rounded-lg border ${currentPage === 1
-                                    ? 'border-gray-200 text-gray-300 cursor-not-allowed'
-                                    : 'border-gray-300 text-gray-700 hover:bg-gray-100 hover:border-gray-400'
-                                    } transition-colors`}
+                                className={`p-2 rounded-lg border ${
+                                    currentPage === 1
+                                        ? 'border-slate-200 text-slate-300 cursor-not-allowed'
+                                        : 'border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300'
+                                } transition-all`}
                             >
                                 <ChevronLeft size={16} />
                             </button>
 
                             <div className="flex items-center gap-1">
-                                {[...Array(totalPages)].map((_, i) => {
-                                    const page = i + 1;
-                                    if (
-                                        page === 1 ||
-                                        page === totalPages ||
-                                        Math.abs(page - currentPage) <= 1 ||
-                                        (page === 2 && currentPage > 3) ||
-                                        (page === totalPages - 1 && currentPage < totalPages - 2)
-                                    ) {
+                                {[...Array(Math.min(totalPages, 7))].map((_, i) => {
+                                    let page;
+                                    if (totalPages <= 7) {
+                                        page = i + 1;
+                                    } else if (currentPage <= 4) {
+                                        page = i + 1;
+                                    } else if (currentPage >= totalPages - 3) {
+                                        page = totalPages - 6 + i;
+                                    } else {
+                                        page = currentPage - 3 + i;
+                                    }
+                                    
+                                    if (page >= 1 && page <= totalPages) {
                                         return (
                                             <button
                                                 key={page}
                                                 onClick={() => handlePageChange(page)}
-                                                className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${currentPage === page
-                                                    ? 'bg-blue-600 text-white'
-                                                    : 'text-gray-700 hover:bg-gray-100'
-                                                    }`}
+                                                className={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                                                    currentPage === page
+                                                        ? 'bg-blue-600 text-white shadow-sm shadow-blue-600/20'
+                                                        : 'text-slate-600 hover:bg-slate-100'
+                                                }`}
                                             >
                                                 {page}
                                             </button>
                                         );
-                                    }
-                                    if (page === 2 && currentPage > 3) {
-                                        return <span key="ellipsis1" className="px-1 text-gray-500">...</span>;
-                                    }
-                                    if (page === totalPages - 1 && currentPage < totalPages - 2) {
-                                        return <span key="ellipsis2" className="px-1 text-gray-500">...</span>;
                                     }
                                     return null;
                                 })}
@@ -265,10 +423,11 @@ export default function Items() {
                             <button
                                 onClick={() => handlePageChange(currentPage + 1)}
                                 disabled={currentPage === totalPages || totalPages === 0}
-                                className={`p-2 rounded-lg border ${currentPage === totalPages || totalPages === 0
-                                    ? 'border-gray-200 text-gray-300 cursor-not-allowed'
-                                    : 'border-gray-300 text-gray-700 hover:bg-gray-100 hover:border-gray-400'
-                                    } transition-colors`}
+                                className={`p-2 rounded-lg border ${
+                                    currentPage === totalPages || totalPages === 0
+                                        ? 'border-slate-200 text-slate-300 cursor-not-allowed'
+                                        : 'border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300'
+                                } transition-all`}
                             >
                                 <ChevronRight size={16} />
                             </button>
