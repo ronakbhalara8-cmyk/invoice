@@ -83,9 +83,9 @@ export function downloadInvoicePdf(invoice) {
     doc.text(`GST: ${sanitizeText(company.company_gst_number || 'N/A')}`, 58, gstY);
 
     // INVOICE box - Right side
-    doc.setFillColor(37, 99, 235);
+    doc.setFillColor(255, 255, 255);
     doc.roundedRect(430, currentY, 125, 40, 4, 4, 'F');
-    doc.setTextColor(255, 255, 255);
+    doc.setTextColor(37, 99, 235);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(22);
     doc.text('INVOICE', 492, currentY + 27, {align: 'center'});
