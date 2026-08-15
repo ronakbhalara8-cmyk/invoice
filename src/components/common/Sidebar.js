@@ -10,7 +10,8 @@ import {
   AlertTriangle,
   LogOut,
   ChevronLeft,
-  X
+  X,
+  Users
 } from 'lucide-react';
 
 export default function Sidebar({ isOpen, onClose, isCollapsed, onToggle }) {
@@ -43,7 +44,8 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggle }) {
   const menuItems = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Items', href: '/dashboard/item', icon: Package },
-    { name: 'Billing', href: '/dashboard/billing', icon: FileText },
+    { name: 'Customers', href: '/dashboard/customer', icon: Users },
+    { name: 'Invoice', href: '/dashboard/invoice', icon: FileText },
     { name: 'Selling', href: '/dashboard/selling', icon: DollarSign },
     { name: 'Out of Stock', href: '/dashboard/out-of-stock', icon: AlertTriangle },
   ];

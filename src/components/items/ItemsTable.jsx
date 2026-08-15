@@ -8,6 +8,7 @@ import {
   Edit,
   Trash2,
   MoreHorizontal,
+  Filter,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -22,14 +23,21 @@ export default function ItemsTable({
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All");
   const [sortConfig, setSortConfig] = useState(null);
 
-  // Filter items
-  const filteredItems = items.filter(
-    (item) =>
+  // Filter items by search term and status
+  const filteredItems = items.filter((item) => {
+    // Search filter
+    const matchesSearch = 
       item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (item.description && item.description.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+      (item.description && item.description.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    // Status filter
+    const matchesStatus = statusFilter === "All" || item.status === statusFilter;
+    
+    return matchesSearch && matchesStatus;
+  });
 
   // Sort items
   const sortedItems = [...filteredItems];
@@ -61,6 +69,12 @@ export default function ItemsTable({
   const startIndex = (currentPage - 1) * rowsPerPage;
   const endIndex = startIndex + rowsPerPage;
   const currentItems = sortedItems.slice(startIndex, endIndex);
+
+  // Get unique statuses from items for filter options
+  const getStatusOptions = () => {
+    const statuses = new Set(items.map(item => item.status).filter(Boolean));
+    return ["All", ...Array.from(statuses)];
+  };
 
   const handlePageChange = (page) => {
     if (page >= 1 && page <= totalPages) {
@@ -102,12 +116,12 @@ export default function ItemsTable({
 
   // ✅ Event handlers with stopPropagation
   const handleEditClick = (e, item) => {
-    e.stopPropagation(); // Prevent row click
+    e.stopPropagation();
     onEditClick(item);
   };
 
   const handleDeleteClick = (e, item) => {
-    e.stopPropagation(); // Prevent row click
+    e.stopPropagation();
     onDeleteClick(item);
   };
 
@@ -117,8 +131,7 @@ export default function ItemsTable({
 
   // ✅ Handle More button click
   const handleMoreClick = (e) => {
-    e.stopPropagation(); // Prevent row click
-    // Add your more options logic here
+    e.stopPropagation();
     console.log('More options clicked');
   };
 
@@ -146,6 +159,31 @@ export default function ItemsTable({
               className="pl-10 pr-4 py-2 w-full sm:w-64 rounded-lg border border-gray-300 bg-white text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
             />
           </div>
+          
+          {/* ✅ Status Filter Dropdown */}
+          <div className="relative">
+            <select
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="pl-9 pr-8 py-2 rounded-lg border border-gray-300 bg-white text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 appearance-none cursor-pointer"
+            >
+              {getStatusOptions().map((status) => (
+                <option key={status} value={status}>
+                  {status === "All" ? "All Status" : status}
+                </option>
+              ))}
+            </select>
+            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </div>
+
           <button 
             onClick={onAddClick}
             className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-all shadow-sm"
@@ -274,15 +312,6 @@ export default function ItemsTable({
                           title="Delete item"
                         >
                           <Trash2 size={15} />
-                        </button>
-                        
-                        {/* ✅ More Button with stopPropagation */}
-                        <button 
-                          onClick={(e) => handleMoreClick(e)}
-                          className="p-1.5 rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
-                          title="More options"
-                        >
-                          <MoreHorizontal size={15} />
                         </button>
                       </div>
                     </td>
