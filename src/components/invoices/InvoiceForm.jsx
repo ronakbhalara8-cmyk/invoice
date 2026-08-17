@@ -29,7 +29,18 @@ const sanitizePhoneValue = (value = '') => value.replace(/\D/g, '').slice(0, 15)
 
 const isValidPhoneNumber = (value = '') => {
     const digits = sanitizePhoneValue(value);
-    return digits.length >= 10 && digits.length <= 15;
+    return digits.length === 10;
+};
+
+const isValidEmail = (value = '') => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value).trim());
+
+const isItemRowComplete = (item = {}) => {
+    const name = item.name?.trim();
+    const qty = Number(item.qty || 0);
+    const rate = Number(item.rate || 0);
+    const discount = Number(item.discount || 0);
+
+    return Boolean(name) && qty > 0 && rate > 0 && discount >= 0 && discount <= 100;
 };
 
 export default function InvoiceForm({onCancel, onInvoiceCreated}) {
@@ -96,14 +107,21 @@ export default function InvoiceForm({onCancel, onInvoiceCreated}) {
     );
 
     const updateItem = (id, field, value) => {
-        setItems((prev) =>
-            prev.map((item) => {
+        setItems((prev) => {
+            const updatedItems = prev.map((item) => {
                 if (item.id !== id) return item;
+                return {...item, [field]: value};
+            });
 
-                const nextItem = {...item, [field]: value};
-                return nextItem;
-            })
-        );
+            const activeItem = updatedItems.find((item) => item.id === id);
+            const isLastRow = updatedItems.at(-1)?.id === id;
+
+            if (isLastRow && activeItem && isItemRowComplete(activeItem)) {
+                return [...updatedItems, emptyItem()];
+            }
+
+            return updatedItems;
+        });
     };
 
     const addItemRow = () => {
@@ -121,18 +139,56 @@ export default function InvoiceForm({onCancel, onInvoiceCreated}) {
         event.preventDefault();
 
         const validItems = items.filter((item) => item.name?.trim());
-        if (!companyInfo.company_name || !billingTo.customer_name || validItems.length === 0) {
-            toast.error('Please fill company info, billing customer, and at least one item.');
+        if (!companyInfo.company_name || validItems.length === 0) {
+            toast.error('Please fill company info and at least one item.');
+            return;
+        }
+
+        const requiredBillingFields = [
+            ['customer_name', billingTo.customer_name],
+            ['company_name', billingTo.company_name],
+            ['address', billingTo.address],
+            ['email', billingTo.email],
+            ['phone', billingTo.phone],
+        ];
+
+        const missingBillingField = requiredBillingFields.find(([, value]) => !String(value || '').trim());
+        if (missingBillingField) {
+            toast.error('Please fill all Billing To fields before generating the invoice.');
+            return;
+        }
+
+        if (!isValidEmail(billingTo.email)) {
+            toast.error('Please enter a valid billing email address.');
             return;
         }
 
         if (!isValidPhoneNumber(billingTo.phone)) {
-            toast.error('Please enter a valid billing mobile number with 10 to 15 digits.');
+            toast.error('Please enter a valid billing mobile number with exactly 10 digits.');
             return;
         }
 
-        if (shippingTo.phone && !isValidPhoneNumber(shippingTo.phone)) {
-            toast.error('Please enter a valid shipping mobile number with 10 to 15 digits.');
+        const requiredShippingFields = [
+            ['customer_name', shippingTo.customer_name],
+            ['company_name', shippingTo.company_name],
+            ['address', shippingTo.address],
+            ['email', shippingTo.email],
+            ['phone', shippingTo.phone],
+        ];
+
+        const missingShippingField = requiredShippingFields.find(([, value]) => !String(value || '').trim());
+        if (missingShippingField) {
+            toast.error('Please fill all Shipping To fields before generating the invoice.');
+            return;
+        }
+
+        if (!isValidEmail(shippingTo.email)) {
+            toast.error('Please enter a valid shipping email address.');
+            return;
+        }
+
+        if (!isValidPhoneNumber(shippingTo.phone)) {
+            toast.error('Please enter a valid shipping mobile number with exactly 10 digits.');
             return;
         }
 
@@ -150,11 +206,11 @@ export default function InvoiceForm({onCancel, onInvoiceCreated}) {
                 phone: billingTo.phone,
             },
             shippingTo: {
-                customer_name: shippingTo.customer_name || billingTo.customer_name,
-                company_name: shippingTo.company_name || billingTo.company_name,
-                address: shippingTo.address || billingTo.address,
-                email: shippingTo.email || billingTo.email,
-                phone: shippingTo.phone || billingTo.phone,
+                customer_name: shippingTo.customer_name,
+                company_name: shippingTo.company_name,
+                address: shippingTo.address,
+                email: shippingTo.email,
+                phone: shippingTo.phone,
             },
             items: validItems.map((item) => ({
                 name: item.name.trim(),
@@ -256,18 +312,21 @@ export default function InvoiceForm({onCancel, onInvoiceCreated}) {
                         <h3 className="mb-4 text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Billing To</h3>
                         <div className="space-y-3">
                             <input
+                                required
                                 value={billingTo.customer_name}
                                 onChange={(event) => setBillingTo((prev) => ({...prev, customer_name: event.target.value}))}
                                 className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-blue-500"
                                 placeholder="Enter your name"
                             />
                             <input
+                                required
                                 value={billingTo.company_name}
                                 onChange={(event) => setBillingTo((prev) => ({...prev, company_name: event.target.value}))}
                                 className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-blue-500"
                                 placeholder="Company name"
                             />
                             <textarea
+                                required
                                 value={billingTo.address}
                                 onChange={(event) => setBillingTo((prev) => ({...prev, address: event.target.value}))}
                                 className="min-h-[90px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-blue-500"
@@ -276,6 +335,7 @@ export default function InvoiceForm({onCancel, onInvoiceCreated}) {
                             <div className="grid gap-3 sm:grid-cols-2">
                                 <input
                                     type='email'
+                                    required
                                     value={billingTo.email}
                                     onChange={(event) => setBillingTo((prev) => ({...prev, email: event.target.value}))}
                                     className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-blue-500"
@@ -283,6 +343,7 @@ export default function InvoiceForm({onCancel, onInvoiceCreated}) {
                                 />
                                 <input
                                     type='tel'
+                                    required
                                     inputMode="numeric"
                                     value={billingTo.phone}
                                     onChange={(event) => setBillingTo((prev) => ({...prev, phone: sanitizePhoneValue(event.target.value)}))}
@@ -297,18 +358,21 @@ export default function InvoiceForm({onCancel, onInvoiceCreated}) {
                         <h3 className="mb-4 text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Shipping To</h3>
                         <div className="space-y-3">
                             <input
+                                required
                                 value={shippingTo.customer_name}
                                 onChange={(event) => setShippingTo((prev) => ({...prev, customer_name: event.target.value}))}
                                 className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-blue-500"
                                 placeholder="Customer name"
                             />
                             <input
+                                required
                                 value={shippingTo.company_name}
                                 onChange={(event) => setShippingTo((prev) => ({...prev, company_name: event.target.value}))}
                                 className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-blue-500"
                                 placeholder="Company name"
                             />
                             <textarea
+                                required
                                 value={shippingTo.address}
                                 onChange={(event) => setShippingTo((prev) => ({...prev, address: event.target.value}))}
                                 className="min-h-[90px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-blue-500"
@@ -317,6 +381,7 @@ export default function InvoiceForm({onCancel, onInvoiceCreated}) {
                             <div className="grid gap-3 sm:grid-cols-2">
                                 <input
                                     type='email'
+                                    required
                                     value={shippingTo.email}
                                     onChange={(event) => setShippingTo((prev) => ({...prev, email: event.target.value}))}
                                     className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-blue-500"
@@ -324,6 +389,7 @@ export default function InvoiceForm({onCancel, onInvoiceCreated}) {
                                 />
                                 <input
                                     type='tel'
+                                    required
                                     inputMode="numeric"
                                     value={shippingTo.phone}
                                     onChange={(event) => setShippingTo((prev) => ({...prev, phone: sanitizePhoneValue(event.target.value)}))}
