@@ -1,5 +1,6 @@
 "use client";
 
+import {EyeClosed, EyeIcon, EyeOff} from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-toastify';
 
@@ -198,7 +199,7 @@ export default function ProfileEditModal({ user, onClose, onUserUpdate }) {
                     className="absolute inset-y-0 right-3 flex items-center text-sm font-medium text-slate-500 hover:text-slate-700"
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
                   >
-                    {showPassword ? 'Hide' : 'Show'}
+                    {showPassword ? <EyeOff/> : <EyeIcon/> }
                   </button>
                 </div>
               </div>

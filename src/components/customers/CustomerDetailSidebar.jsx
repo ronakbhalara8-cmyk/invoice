@@ -44,11 +44,11 @@ export default function CustomerDetailSidebar({ isOpen, onClose, customer, onEdi
 
   return (
     <>
-      <div className={`fixed inset-0 z-40 bg-black/60 backdrop-blur-sm transition-opacity duration-300 ${isOpen && !isClosing ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={handleClose} />
+      <div className={`fixed inset-0 z-50 h-screen bg-black/60 backdrop-blur-sm transition-opacity duration-300 ${isOpen && !isClosing ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={handleClose} />
 
       <aside
         ref={sidebarRef}
-        className={`fixed right-0 top-0 z-50 h-full w-full max-w-lg bg-white shadow-2xl transition-all duration-300 ${isOpen && !isClosing ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'}`}
+        className={`fixed font-sans right-0 top-0 z-50 h-full w-full max-w-lg bg-white shadow-2xl transition-all duration-300 ${isOpen && !isClosing ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'}`}
       >
         <div className="flex items-center justify-between bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-5 text-white">
           <div className="flex items-center gap-3">
@@ -56,7 +56,7 @@ export default function CustomerDetailSidebar({ isOpen, onClose, customer, onEdi
               <User className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-xs uppercase tracking-[0.2em] text-blue-100">Customer</p>
+              <p className="text-xs uppercase tracking-[0.1em] text-blue-100">Customer</p>
               <h2 className="text-lg font-semibold">Details</h2>
             </div>
           </div>
@@ -69,7 +69,7 @@ export default function CustomerDetailSidebar({ isOpen, onClose, customer, onEdi
           <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-xs font-medium uppercase tracking-[0.2em] text-gray-500">Name</p>
+                <p className="text-xs font-bold uppercase tracking-[0.1em] text-gray-900">Name</p>
                 <h3 className="mt-2 text-2xl font-bold text-gray-900">{fullName}</h3>
               </div>
               <button type="button" onClick={() => onEdit?.(customer)} className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-3 py-2 text-xs font-medium text-white hover:bg-blue-500">
@@ -88,7 +88,7 @@ export default function CustomerDetailSidebar({ isOpen, onClose, customer, onEdi
             <div className="rounded-2xl border border-gray-200 bg-white p-4">
               <div className="mb-2 flex items-center gap-2 text-gray-500">
                 <Building2 className="h-4 w-4" />
-                <span className="text-xs font-medium uppercase tracking-[0.2em]">Company</span>
+                <span className="text-xs font-bold uppercase tracking-[0.1em] text-gray-900">Company</span>
               </div>
               <p className="text-sm text-gray-800">{formatValue(companyName)}</p>
             </div>
@@ -96,7 +96,7 @@ export default function CustomerDetailSidebar({ isOpen, onClose, customer, onEdi
             <div className="rounded-2xl border border-gray-200 bg-white p-4">
               <div className="mb-2 flex items-center gap-2 text-gray-500">
                 <Mail className="h-4 w-4" />
-                <span className="text-xs font-medium uppercase tracking-[0.2em]">Email</span>
+                <span className="text-xs font-bold uppercase tracking-[0.1em] text-gray-900">Email</span>
               </div>
               <p className="text-sm text-gray-800">{formatValue(customer.email)}</p>
             </div>
@@ -104,7 +104,7 @@ export default function CustomerDetailSidebar({ isOpen, onClose, customer, onEdi
             <div className="rounded-2xl border border-gray-200 bg-white p-4">
               <div className="mb-2 flex items-center gap-2 text-gray-500">
                 <Phone className="h-4 w-4" />
-                <span className="text-xs font-medium uppercase tracking-[0.2em]">Phone</span>
+                <span className="text-xs font-bold uppercase tracking-[0.1em] text-gray-900">Phone</span>
               </div>
               <p className="text-sm text-gray-800">{formatValue(customer.phone)}</p>
             </div>
@@ -112,7 +112,7 @@ export default function CustomerDetailSidebar({ isOpen, onClose, customer, onEdi
             <div className="rounded-2xl border border-gray-200 bg-white p-4">
               <div className="mb-2 flex items-center gap-2 text-gray-500">
                 <Calendar className="h-4 w-4" />
-                <span className="text-xs font-medium uppercase tracking-[0.2em]">Created</span>
+                <span className="text-xs font-bold uppercase tracking-[0.1em] text-gray-900">Created</span>
               </div>
               <p className="text-sm text-gray-800">{customer.created_at ? new Date(customer.created_at).toLocaleDateString('en-GB') : '—'}</p>
             </div>
@@ -121,7 +121,7 @@ export default function CustomerDetailSidebar({ isOpen, onClose, customer, onEdi
           <div className="rounded-2xl border border-gray-200 bg-white p-4">
             <div className="mb-3 flex items-center gap-2 text-gray-500">
               <MapPin className="h-4 w-4" />
-              <span className="text-xs font-medium uppercase tracking-[0.2em]">Billing Address</span>
+              <span className="text-xs font-bold uppercase tracking-[0.1em] text-gray-900">Billing Address</span>
             </div>
             <div className="space-y-1 text-sm text-gray-700">
               <p>{formatValue(billingAddress.attention)}</p>
@@ -134,7 +134,7 @@ export default function CustomerDetailSidebar({ isOpen, onClose, customer, onEdi
           <div className="rounded-2xl border border-gray-200 bg-white p-4">
             <div className="mb-3 flex items-center gap-2 text-gray-500">
               <MapPin className="h-4 w-4" />
-              <span className="text-xs font-medium uppercase tracking-[0.2em]">Shipping Address</span>
+              <span className="text-xs font-bold uppercase tracking-[0.1em] text-gray-900">Shipping Address</span>
             </div>
             <div className="space-y-1 text-sm text-gray-700">
               <p>{formatValue(shippingAddress.attention)}</p>
@@ -147,21 +147,19 @@ export default function CustomerDetailSidebar({ isOpen, onClose, customer, onEdi
           <div className="rounded-2xl border border-gray-200 bg-white p-4">
             <div className="mb-3 flex items-center gap-2 text-gray-500">
               <StickyNote className="h-4 w-4" />
-              <span className="text-xs font-medium uppercase tracking-[0.2em]">Other Details</span>
+              <span className="text-xs font-bold uppercase tracking-[0.1em] text-gray-900">Other Details</span>
             </div>
             <div className="space-y-3 text-sm text-gray-700">
-              <p><span className="font-medium text-gray-600">PAN:</span> {formatValue(customer.pan)}</p>
-              <p><span className="font-medium text-gray-600">Payment Terms:</span> {formatValue(customer.payment_terms)}</p>
-              <p><span className="font-medium text-gray-600">Documents:</span> {formatValue(customer.documents)}</p>
-              <p><span className="font-medium text-gray-600">Custom Fields:</span> {typeof customer.custom_fields === 'string' ? customer.custom_fields : JSON.stringify(customer.custom_fields || {}) || '—'}</p>
-              <p><span className="font-medium text-gray-600">Remarks:</span> {formatValue(customer.remarks)}</p>
+              <p><span className="text-xs font-bold uppercase tracking-[0.1em] text-gray-900">PAN :</span> {formatValue(customer.pan)}</p>
+              <p><span className="text-xs font-bold uppercase tracking-[0.1em] text-gray-900">Payment Terms :</span> {formatValue(customer.payment_terms)}</p>
+              <p><span className="text-xs font-bold uppercase tracking-[0.1em] text-gray-900">Remarks :</span> {formatValue(customer.remarks)}</p>
             </div>
           </div>
 
           <div className="rounded-2xl border border-gray-200 bg-white p-4">
             <div className="mb-3 flex items-center gap-2 text-gray-500">
               <User className="h-4 w-4" />
-              <span className="text-xs font-medium uppercase tracking-[0.2em]">Contact Persons</span>
+              <span className="text-xs font-bold uppercase tracking-[0.1em] text-gray-900">Contact Persons</span>
             </div>
             {contactPersons.length > 0 ? (
               <div className="space-y-3">

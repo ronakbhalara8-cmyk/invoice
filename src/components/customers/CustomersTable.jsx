@@ -193,13 +193,6 @@ export default function CustomersTable({
                         >
                           <Trash2 size={16} />
                         </button>
-                        <button
-                          type="button"
-                          onClick={(e) => e.stopPropagation()}
-                          className="rounded-lg p-2 text-gray-500 transition hover:bg-gray-100"
-                        >
-                          <MoreHorizontal size={16} />
-                        </button>
                       </div>
                     </td>
                   </tr>

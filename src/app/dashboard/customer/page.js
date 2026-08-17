@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from 'react';
-import { FilePlus2, FileText } from 'lucide-react';
+import {useEffect, useState} from 'react';
+import {FilePlus2, FileText} from 'lucide-react';
 import CustomersTable from '@/components/customers/CustomersTable';
 import CustomerModal from '@/components/customers/CustomerModal';
 import CustomerDetailSidebar from '@/components/customers/CustomerDetailSidebar';
@@ -74,31 +74,6 @@ export default function CustomerPage() {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_18px_50px_rgba(15,23,42,0.06)]">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-100 text-blue-700">
-              <FileText className="h-6 w-6" />
-            </div>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-blue-600">Management</p>
-              <h1 className="text-3xl font-bold text-slate-900">Customers</h1>
-            </div>
-          </div>
-
-          {!showForm && (
-            <button
-              type="button"
-              onClick={openAddCustomer}
-              className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-500/20 transition hover:bg-blue-500"
-            >
-              <FilePlus2 className="h-4 w-4" />
-              Add Customer
-            </button>
-          )}
-        </div>
-      </div>
-
       {showForm ? (
         <CustomerModal
           isOpen={showForm}

@@ -40,7 +40,6 @@ export async function GET(request) {
           billing_address: customer.billing_address || {},
           shipping_address: customer.shipping_address || {},
           contact_persons: Array.isArray(customer.contact_persons) ? customer.contact_persons : [],
-          custom_fields: customer.custom_fields || {},
         })),
       });
     } finally {
@@ -69,11 +68,9 @@ export async function POST(request) {
       phone,
       pan,
       payment_terms,
-      documents,
       billing_address,
       shipping_address,
       contact_persons,
-      custom_fields,
       remarks,
     } = body || {};
 
@@ -97,15 +94,13 @@ export async function POST(request) {
           phone,
           pan,
           payment_terms,
-          documents,
           billing_address,
           shipping_address,
           contact_persons,
-          custom_fields,
           remarks,
           created_at,
           updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, NOW(), NOW())
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), NOW())
         RETURNING *
       `;
 
@@ -119,11 +114,9 @@ export async function POST(request) {
         phone || '',
         pan || '',
         payment_terms || '',
-        documents || '',
         JSON.stringify(billing_address || {}),
         JSON.stringify(shipping_address || {}),
         JSON.stringify(Array.isArray(contact_persons) ? contact_persons : []),
-        JSON.stringify(custom_fields || {}),
         remarks || '',
       ];
 
@@ -138,7 +131,6 @@ export async function POST(request) {
           billing_address: createdCustomer.billing_address || {},
           shipping_address: createdCustomer.shipping_address || {},
           contact_persons: Array.isArray(createdCustomer.contact_persons) ? createdCustomer.contact_persons : [],
-          custom_fields: createdCustomer.custom_fields || {},
         },
       }, { status: 201 });
     } catch (error) {

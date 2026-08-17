@@ -16,6 +16,7 @@ function getAuthPayload(request) {
 
 export async function GET(request, { params }) {
   try {
+    const { id } = await params;
     const auth = getAuthPayload(request);
     if (!auth || !auth.organizationId) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
@@ -28,7 +29,7 @@ export async function GET(request, { params }) {
         FROM customers
         WHERE id = $1 AND organization_id = $2
       `;
-      const result = await client.query(query, [params.id, auth.organizationId]);
+      const result = await client.query(query, [id, auth.organizationId]);
 
       if (result.rows.length === 0) {
         return NextResponse.json({ success: false, message: 'Customer not found' }, { status: 404 });
@@ -42,7 +43,6 @@ export async function GET(request, { params }) {
           billing_address: customer.billing_address || {},
           shipping_address: customer.shipping_address || {},
           contact_persons: Array.isArray(customer.contact_persons) ? customer.contact_persons : [],
-          custom_fields: customer.custom_fields || {},
         },
       });
     } finally {
@@ -56,6 +56,7 @@ export async function GET(request, { params }) {
 
 export async function PUT(request, { params }) {
   try {
+    const { id } = await params;
     const auth = getAuthPayload(request);
     if (!auth || !auth.organizationId) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
@@ -71,11 +72,9 @@ export async function PUT(request, { params }) {
       phone,
       pan,
       payment_terms,
-      documents,
       billing_address,
       shipping_address,
       contact_persons,
-      custom_fields,
       remarks,
     } = body || {};
 
@@ -94,14 +93,12 @@ export async function PUT(request, { params }) {
           phone = $6,
           pan = $7,
           payment_terms = $8,
-          documents = $9,
-          billing_address = $10,
-          shipping_address = $11,
-          contact_persons = $12,
-          custom_fields = $13,
-          remarks = $14,
+          billing_address = $9,
+          shipping_address = $10,
+          contact_persons = $11,
+          remarks = $12,
           updated_at = NOW()
-        WHERE id = $15 AND organization_id = $16
+        WHERE id = $13 AND organization_id = $14
         RETURNING *
       `;
 
@@ -114,13 +111,11 @@ export async function PUT(request, { params }) {
         phone || '',
         pan || '',
         payment_terms || '',
-        documents || '',
         JSON.stringify(billing_address || {}),
         JSON.stringify(shipping_address || {}),
         JSON.stringify(Array.isArray(contact_persons) ? contact_persons : []),
-        JSON.stringify(custom_fields || {}),
         remarks || '',
-        params.id,
+        id,
         auth.organizationId,
       ];
 
@@ -140,7 +135,6 @@ export async function PUT(request, { params }) {
           billing_address: updatedCustomer.billing_address || {},
           shipping_address: updatedCustomer.shipping_address || {},
           contact_persons: Array.isArray(updatedCustomer.contact_persons) ? updatedCustomer.contact_persons : [],
-          custom_fields: updatedCustomer.custom_fields || {},
         },
       });
     } catch (error) {
@@ -157,6 +151,7 @@ export async function PUT(request, { params }) {
 
 export async function DELETE(request, { params }) {
   try {
+    const { id } = await params;
     const auth = getAuthPayload(request);
     if (!auth || !auth.organizationId) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
@@ -169,7 +164,7 @@ export async function DELETE(request, { params }) {
         WHERE id = $1 AND organization_id = $2
       `;
 
-      const result = await client.query(query, [params.id, auth.organizationId]);
+      const result = await client.query(query, [id, auth.organizationId]);
 
       if (result.rowCount === 0) {
         return NextResponse.json({ success: false, message: 'Customer not found' }, { status: 404 });

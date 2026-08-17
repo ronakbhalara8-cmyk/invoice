@@ -88,6 +88,23 @@ export default function DashboardLayout({ children }) {
     }
   }, []);
 
+  // Disable scroll when profile panel is open
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      if (isProfilePanelOpen) {
+        document.body.style.overflow = 'hidden';
+      } else {
+        document.body.style.overflow = 'unset';
+      }
+    }
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        document.body.style.overflow = 'unset';
+      }
+    };
+  }, [isProfilePanelOpen]);
+
   return (
     <div className="min-h-screen bg-slate-50 flex">
       <Sidebar
