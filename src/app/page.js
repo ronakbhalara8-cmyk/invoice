@@ -14,7 +14,6 @@ import {
   Eye,
 } from "lucide-react";
 
-const API_BASE = "https://countriesnow.space/api/v0.1";
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 
 export default function Home() {
@@ -25,7 +24,7 @@ export default function Home() {
   const [googleCredential, setGoogleCredential] = useState(null);
   const [googleProfile, setGoogleProfile] = useState(null);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [isLoginMode, setIsLoginMode] = useState(false);
+  const [isLoginMode, setIsLoginMode] = useState(true);
 
   // Login form state
   const [loginEmail, setLoginEmail] = useState("");
@@ -57,22 +56,15 @@ export default function Home() {
       try {
         setLoadingCountries(true);
 
-        const response = await fetch(`${API_BASE}/countries/codes`);
+        const response = await fetch("/api/countries");
 
         if (!response.ok) {
           throw new Error("Failed to fetch countries");
         }
 
-        const result = await response.json();
+        const countryList = await response.json();
 
-        if (!result.error && result.data) {
-          const countryList = result.data.map((country) => ({
-            name: country.name,
-            iso2: country.iso2,
-            iso3: country.iso3,
-            dialCode: country.dial_code,
-          }));
-
+        if (Array.isArray(countryList) && countryList.length > 0) {
           setCountries(countryList);
 
           const india = countryList.find(
@@ -86,6 +78,7 @@ export default function Home() {
         }
       } catch (error) {
         console.error("Country API Error:", error);
+        setCountries([]);
       } finally {
         setLoadingCountries(false);
       }
@@ -105,20 +98,17 @@ export default function Home() {
       try {
         setLoadingStates(true);
 
-        const response = await fetch(`${API_BASE}/countries/states`);
+        const response = await fetch(
+          `/api/states?country=${encodeURIComponent(selectedCountry)}`
+        );
 
         if (!response.ok) {
           throw new Error("Failed to fetch states");
         }
 
-        const result = await response.json();
+        const stateList = await response.json();
 
-        if (!result.error && result.data) {
-          const countryEntry = result.data.find(
-            (country) => country.name.toLowerCase() === selectedCountry.toLowerCase()
-          );
-          const stateList = countryEntry?.states || [];
-
+        if (Array.isArray(stateList) && stateList.length > 0) {
           setStates(stateList);
 
           const gujarat = stateList.find(
@@ -130,7 +120,11 @@ export default function Home() {
           } else {
             setSelectedState(stateList[0]?.name || "");
           }
+          return;
         }
+
+        setStates([]);
+        setSelectedState("");
       } catch (error) {
         console.error("State API Error:", error);
         setStates([]);
@@ -322,6 +316,8 @@ export default function Home() {
 
     if (country) {
       setSelectedCountryCode(country.dialCode || "");
+    } else {
+      setSelectedCountryCode("");
     }
   };
 

@@ -1,7 +1,7 @@
 "use client";
 import { usePathname } from 'next/navigation';
 
-export default function Navbar({ user, onMenuClick }) {
+export default function Navbar({ user, onMenuClick, onProfileClick }) {
   const pathname = usePathname();
   const organizationName = user?.organizationName || user?.company_name || user?.name || 'Organization';
   const userEmail = user?.email || 'N/A';
@@ -51,8 +51,12 @@ export default function Navbar({ user, onMenuClick }) {
             </button>
 
             {/* Profile info */}
-            <div className="relative">
-              <div className="flex items-center space-x-3 p-2 rounded-lg">
+            <button
+              type="button"
+              onClick={onProfileClick}
+              className="relative rounded-lg text-left cursor-pointer"
+            >
+              <div className="flex items-center space-x-3">
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 shadow-sm">
                   <span className="text-sm font-bold text-white">
                     {organizationName?.charAt(0).toUpperCase() || 'U'}
@@ -63,7 +67,7 @@ export default function Navbar({ user, onMenuClick }) {
                   <p className="text-xs text-slate-500">{userEmail}</p>
                 </div>
               </div>
-            </div>
+            </button>
           </div>
         </div>
       </div>

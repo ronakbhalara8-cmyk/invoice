@@ -4,8 +4,10 @@ const sanitizeText = (value) => {
     if (value === null || value === undefined) return '';
     return String(value)
         .replace(/&/g, '')
-        .replace(/[\u0000-\u001F\u007F]/g, '')
-        .replace(/[^\p{L}\p{N}\s\-.,/@():#_]/gu, '')
+        .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '')
+        .replace(/[^\p{L}\p{N}\s\n\r\-.,/@():#_]/gu, '')
+        .replace(/\r\n/g, '\n')
+        .replace(/\r/g, '\n')
         .trim();
 };
 
@@ -41,9 +43,21 @@ export function downloadInvoicePdf(invoice) {
     const items = Array.isArray(invoice.items) ? invoice.items : [];
     const invoiceNumber = sanitizeText(invoice.invoice_number || 'INV-0000');
     const invoiceDate = new Date(invoice.created_at || Date.now()).toLocaleDateString('en-GB');
-    const subtotalValue = Number(invoice.subtotal || 0);
+    const rawSubtotalValue = items.reduce((sum, item) => {
+        const qty = Number(item.qty || 0);
+        const rate = Number(item.rate || 0);
+        return sum + (qty * rate);
+    }, 0);
+    const discountAmountValue = Number(invoice.discount_amount || items.reduce((sum, item) => {
+        const qty = Number(item.qty || 0);
+        const rate = Number(item.rate || 0);
+        const discount = Number(item.discount || 0);
+        return sum + ((qty * rate) * (discount / 100));
+    }, 0));
+    const subtotalValue = Number(invoice.subtotal || (rawSubtotalValue - discountAmountValue));
     const gstRateValue = Number(invoice.gst_rate || 0);
-    const grandTotalValue = Number(invoice.grand_total || 0);
+    const taxAmountValue = Number(invoice.tax_amount || ((subtotalValue * gstRateValue) / 100));
+    const grandTotalValue = Number(invoice.grand_total || (subtotalValue + taxAmountValue));
 
     // Page background
     doc.setFillColor(245, 247, 250);
@@ -211,17 +225,20 @@ export function downloadInvoicePdf(invoice) {
     doc.setFontSize(9);
 
     // Column positions
-    const col1 = 58;    // # 
-    const col2 = 95;    // Item & Description
-    const col3 = 340;   // Qty
-    const col4 = 430;   // Rate
-    const col5 = 520;   // Amount
+    const col1 = 58;
+    const col2 = 95;
+    const col3 = 270;
+    const col4 = 328;
+    const col5 = 390;
+    const col6 = 460;
+    const col7 = 530;
 
     doc.text('#', col1, currentY + 19);
     doc.text('Item & Description', col2, currentY + 19);
     doc.text('Qty', col3, currentY + 19);
     doc.text('Rate', col4, currentY + 19, {align: 'right'});
-    doc.text('Amount', col5, currentY + 19, {align: 'right'});
+    doc.text('Disc.', col5, currentY + 19, {align: 'right'});
+    doc.text('Amount', col7, currentY + 19, {align: 'right'});
 
     // Table rows
     let rowY = currentY + 32;
@@ -233,98 +250,45 @@ export function downloadInvoicePdf(invoice) {
         const name = sanitizeText(item.name || 'Item');
         const qty = Number(item.qty || 0);
         const rate = Number(item.rate || 0);
-        const amount = qty * rate;
+        const discount = Number(item.discount || 0);
+        const amount = qty * rate * (1 - (discount / 100));
 
-        // Calculate row height based on item name
-        const nameLines = splitLines(doc, name, 230);
-        const visibleName = nameLines.slice(0, 2);
+        const rawNameLines = name
+            .split(/\n+/)
+            .flatMap((part) => splitLines(doc, part || ' ', 150));
+        const visibleName = rawNameLines.slice(0, 4);
 
         const lineHeight = 10;
         const textHeight = visibleName.length * lineHeight;
-
-        // Minimum row height
         const rowHeight = Math.max(32, textHeight + 14);
 
-        // Row background - alternate
         if (index % 2 === 0) {
             doc.setFillColor(248, 249, 251);
             doc.rect(45, rowY, 510, rowHeight, 'F');
         }
 
-        // Exact vertical center of the row
         const centerY = rowY + rowHeight / 2 + 3;
 
-        // # - vertically centered
-        doc.text(
-            String(index + 1),
-            col1,
-            centerY
-        );
-
-        // ==========================================
-        // Item & Description - vertically centered
-        // ==========================================
+        doc.text(String(index + 1), col1, centerY);
 
         if (visibleName.length === 1) {
-            // Single line item
-            doc.text(
-                visibleName[0],
-                col2,
-                centerY
-            );
+            doc.text(visibleName[0], col2, centerY);
         } else {
-            // Multiple lines - center entire text block vertically
             const totalTextHeight = (visibleName.length - 1) * lineHeight;
-
-            const nameStartY =
-                centerY - totalTextHeight / 2;
-
+            const nameStartY = centerY - totalTextHeight / 2;
             visibleName.forEach((line, lineIndex) => {
-                doc.text(
-                    line,
-                    col2,
-                    nameStartY + lineIndex * lineHeight
-                );
+                doc.text(line, col2, nameStartY + lineIndex * lineHeight);
             });
         }
 
-        // Qty - vertically centered
-        doc.text(
-            String(qty),
-            col3,
-            centerY
-        );
+        doc.text(String(qty), col3, centerY);
+        doc.text(formatAmount(rate), col4, centerY, {align: 'right'});
+        doc.text(`${discount.toFixed(2)}%`, col5, centerY, {align: 'right'});
+        doc.text(formatAmount(amount), col7, centerY, {align: 'right'});
 
-        // Rate - vertically centered + right aligned
-        doc.text(
-            formatAmount(rate),
-            col4,
-            centerY,
-            {
-                align: 'right',
-            }
-        );
-
-        // Amount - vertically centered + right aligned
-        doc.text(
-            formatAmount(amount),
-            col5,
-            centerY,
-            {
-                align: 'right',
-            }
-        );
-
-        // Row divider
         doc.setDrawColor(218, 226, 234);
-        doc.line(
-            45,
-            rowY + rowHeight,
-            555,
-            rowY + rowHeight
-        );
+        doc.line(45, rowY + rowHeight, 555, rowY + rowHeight);
 
-        // Next row
         rowY += rowHeight + 2;
     });
 
@@ -333,9 +297,9 @@ export function downloadInvoicePdf(invoice) {
 
     // Summary box
     doc.setFillColor(248, 250, 252);
-    doc.roundedRect(355, summaryY, 200, 100, 6, 6, 'F');
+    doc.roundedRect(355, summaryY, 200, 120, 6, 6, 'F');
     doc.setDrawColor(218, 226, 234);
-    doc.roundedRect(355, summaryY, 200, 100, 6, 6, 'S');
+    doc.roundedRect(355, summaryY, 200, 120, 6, 6, 'S');
 
     // Summary content
     let sumY = summaryY + 18;
@@ -347,20 +311,26 @@ export function downloadInvoicePdf(invoice) {
     doc.text('Sub Total', 370, sumY);
     doc.setTextColor(17, 24, 39);
     doc.text(formatAmount(subtotalValue), 540, sumY, {align: 'right'});
-    sumY += 24;
+    sumY += 20;
 
-    // Tax
+    // Discount
     doc.setTextColor(80, 90, 105);
-    doc.text(`Tax (${gstRateValue}%)`, 370, sumY);
-    const taxAmount = (subtotalValue * gstRateValue) / 100;
+    doc.text('Discount', 370, sumY);
     doc.setTextColor(17, 24, 39);
-    doc.text(formatAmount(taxAmount), 540, sumY, {align: 'right'});
-    sumY += 24;
+    doc.text(formatAmount(discountAmountValue), 540, sumY, {align: 'right'});
+    sumY += 20;
+
+    // GST
+    doc.setTextColor(80, 90, 105);
+    doc.text(`GST (${gstRateValue}%)`, 370, sumY);
+    doc.setTextColor(17, 24, 39);
+    doc.text(formatAmount(taxAmountValue), 540, sumY, {align: 'right'});
+    sumY += 20;
 
     // Divider line
     doc.setDrawColor(218, 226, 234);
     doc.line(370, sumY, 540, sumY);
-    sumY += 18;
+    sumY += 16;
 
     // Total
     doc.setFont('helvetica', 'bold');

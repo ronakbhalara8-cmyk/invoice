@@ -35,38 +35,6 @@ function OrganizationPageContent() {
     const [welcomeName, setWelcomeName] = useState('');
     const [pendingRegistration, setPendingRegistration] = useState(null);
 
-    const indiaStatesFallback = [
-        { id: 'AP', state_code: 'AP', name: 'Andhra Pradesh' },
-        { id: 'AR', state_code: 'AR', name: 'Arunachal Pradesh' },
-        { id: 'AS', state_code: 'AS', name: 'Assam' },
-        { id: 'BR', state_code: 'BR', name: 'Bihar' },
-        { id: 'CT', state_code: 'CT', name: 'Chhattisgarh' },
-        { id: 'GA', state_code: 'GA', name: 'Goa' },
-        { id: 'GJ', state_code: 'GJ', name: 'Gujarat' },
-        { id: 'HR', state_code: 'HR', name: 'Haryana' },
-        { id: 'HP', state_code: 'HP', name: 'Himachal Pradesh' },
-        { id: 'JK', state_code: 'JK', name: 'Jammu and Kashmir' },
-        { id: 'JH', state_code: 'JH', name: 'Jharkhand' },
-        { id: 'KA', state_code: 'KA', name: 'Karnataka' },
-        { id: 'KL', state_code: 'KL', name: 'Kerala' },
-        { id: 'MP', state_code: 'MP', name: 'Madhya Pradesh' },
-        { id: 'MH', state_code: 'MH', name: 'Maharashtra' },
-        { id: 'MN', state_code: 'MN', name: 'Manipur' },
-        { id: 'ML', state_code: 'ML', name: 'Meghalaya' },
-        { id: 'MZ', state_code: 'MZ', name: 'Mizoram' },
-        { id: 'NL', state_code: 'NL', name: 'Nagaland' },
-        { id: 'OR', state_code: 'OR', name: 'Odisha' },
-        { id: 'PB', state_code: 'PB', name: 'Punjab' },
-        { id: 'RJ', state_code: 'RJ', name: 'Rajasthan' },
-        { id: 'SK', state_code: 'SK', name: 'Sikkim' },
-        { id: 'TN', state_code: 'TN', name: 'Tamil Nadu' },
-        { id: 'TG', state_code: 'TG', name: 'Telangana' },
-        { id: 'TR', state_code: 'TR', name: 'Tripura' },
-        { id: 'UP', state_code: 'UP', name: 'Uttar Pradesh' },
-        { id: 'UT', state_code: 'UT', name: 'Uttarakhand' },
-        { id: 'WB', state_code: 'WB', name: 'West Bengal' }
-    ];
-
     // Fetch countries on component mount
     useEffect(() => {
         fetchCountries();
@@ -174,40 +142,15 @@ function OrganizationPageContent() {
         setLoading(prev => ({ ...prev, countries: true }));
         setApiError(prev => ({ ...prev, countries: '' }));
 
-        const authKey = process.env.NEXT_PUBLIC_COUNTRY_STATE_API_KEY;
-        const useAuthSource = Boolean(authKey);
-
         try {
-            let countriesData = [];
+            const response = await fetch('/api/countries');
+            if (!response.ok) {
+                throw new Error(`API Error: ${response.status} - ${response.statusText}`);
+            }
 
-            if (useAuthSource) {
-                const response = await fetch('https://api.countrystatecity.in/v1/countries', {
-                    headers: {
-                        'X-CSCAPI-KEY': authKey
-                    }
-                });
-
-                if (!response.ok) {
-                    throw new Error(`API Error: ${response.status} - ${response.statusText}`);
-                }
-
-                countriesData = await response.json();
-            } else {
-                const response = await fetch('https://countriesnow.space/api/v0.1/countries/iso');
-                if (!response.ok) {
-                    throw new Error(`Fallback API Error: ${response.status} - ${response.statusText}`);
-                }
-
-                const result = await response.json();
-                if (!result.data || !Array.isArray(result.data)) {
-                    throw new Error('Unexpected fallback country response');
-                }
-
-                countriesData = result.data.map((country, index) => ({
-                    id: index,
-                    iso2: country.Iso2 || country.iso2 || country.code || country.iso2,
-                    name: country.name
-                }));
+            const countriesData = await response.json();
+            if (!Array.isArray(countriesData)) {
+                throw new Error('Unexpected country response');
             }
 
             setCountries(countriesData);
@@ -222,9 +165,7 @@ function OrganizationPageContent() {
             console.error('Error fetching countries:', error);
             setApiError(prev => ({
                 ...prev,
-                countries: authKey
-                    ? 'Failed to load countries. Please check your API key and refresh the page.'
-                    : 'Failed to load countries from the fallback source. Please refresh the page.'
+                countries: 'Failed to load countries. Please refresh the page and try again.'
             }));
         } finally {
             setLoading(prev => ({ ...prev, countries: false }));
@@ -235,40 +176,15 @@ function OrganizationPageContent() {
         setLoading(prev => ({ ...prev, states: true }));
         setApiError(prev => ({ ...prev, states: '' }));
 
-        const authKey = process.env.NEXT_PUBLIC_COUNTRY_STATE_API_KEY;
-        const useAuthSource = Boolean(authKey);
-
         try {
-            if (!useAuthSource) {
-                if (countryCode === 'IN') {
-                    setStates(indiaStatesFallback);
-                    setFormData(prev => ({ ...prev, state: '' }));
-                    return;
-                }
-
-                setStates([]);
-                setApiError(prev => ({
-                    ...prev,
-                    states: 'State data is only available for India without an API key. Please enter your state manually.'
-                }));
-                return;
-            }
-
-            const response = await fetch(
-                `https://api.countrystatecity.in/v1/countries/${countryCode}/states`,
-                {
-                    headers: {
-                        'X-CSCAPI-KEY': authKey
-                    }
-                }
-            );
-
+            const response = await fetch(`/api/states?country=${encodeURIComponent(countryCode || '')}`);
             if (!response.ok) {
                 throw new Error(`API Error: ${response.status} - ${response.statusText}`);
             }
 
             const data = await response.json();
-            setStates(data);
+            const statesData = Array.isArray(data) ? data : [];
+            setStates(statesData);
             setFormData(prev => ({ ...prev, state: '' }));
         } catch (error) {
             console.error('Error fetching states:', error);
@@ -384,6 +300,7 @@ function OrganizationPageContent() {
                 email: pendingRegistration?.email || '',
                 organizationName: formData.organizationName || pendingRegistration?.companyName || pendingRegistration?.name || 'Organization',
                 company_name: formData.organizationName || pendingRegistration?.companyName || pendingRegistration?.name || 'Organization',
+                gstNumber: formData.gstNumber || '',
             };
 
             sessionStorage.setItem('currentUser', JSON.stringify(profile));

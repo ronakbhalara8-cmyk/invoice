@@ -108,6 +108,8 @@ export async function POST(request) {
       items,
       gstRate,
       subtotal,
+      discountAmount,
+      gstAmount,
       grandTotal,
       terms,
     } = body || {};
@@ -121,8 +123,14 @@ export async function POST(request) {
       name: item.name,
       qty: Number(item.qty || 0),
       rate: Number(item.rate || 0),
-      amount: Number(item.amount || (Number(item.qty || 0) * Number(item.rate || 0))),
+      discount: Number(item.discount || 0),
+      amount: Number(item.amount || (Number(item.qty || 0) * Number(item.rate || 0) * (1 - Number(item.discount || 0) / 100))),
     }));
+
+    const invoiceSubtotal = Number(subtotal || 0);
+    const invoiceDiscountAmount = Number(discountAmount || normalizedItems.reduce((sum, item) => sum + ((Number(item.qty || 0) * Number(item.rate || 0)) * (Number(item.discount || 0) / 100)), 0));
+    const invoiceTaxAmount = Number(gstAmount || (invoiceSubtotal * Number(gstRate || 0) / 100));
+    const invoiceGrandTotal = Number(grandTotal || (invoiceSubtotal + invoiceTaxAmount));
 
     const client = await db.connect();
 
@@ -161,9 +169,9 @@ export async function POST(request) {
         JSON.stringify(billingTo || {}),
         JSON.stringify(shippingTo || {}),
         JSON.stringify(normalizedItems),
-        Number(subtotal || 0),
+        invoiceSubtotal,
         Number(gstRate || 0),
-        Number(grandTotal || 0),
+        invoiceGrandTotal,
         terms || '',
       ];
 
@@ -182,9 +190,11 @@ export async function POST(request) {
           billing_to: billingTo,
           shipping_to: shippingTo,
           items: normalizedItems,
-          subtotal: Number(subtotal || 0),
+          subtotal: invoiceSubtotal,
+          discount_amount: invoiceDiscountAmount,
+          tax_amount: invoiceTaxAmount,
           gst_rate: Number(gstRate || 0),
-          grand_total: Number(grandTotal || 0),
+          grand_total: invoiceGrandTotal,
           terms: terms || '',
           created_at: new Date().toISOString(),
         },

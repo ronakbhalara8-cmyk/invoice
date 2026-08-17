@@ -2,25 +2,25 @@
 import { useState, useEffect } from 'react';
 import Sidebar from '@/components/common/Sidebar';
 import Navbar from '@/components/common/Navbar';
+import ProfileEditModal from '@/components/common/ProfileEditModal';
 
 export default function DashboardLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isProfilePanelOpen, setIsProfilePanelOpen] = useState(false);
 
   useEffect(() => {
     const fetchUserData = async () => {
       try {
         setLoading(true);
 
-        // First check sessionStorage for cached user data
+        // Use cached user data as a quick fallback, but still refresh from the API
         const storedUser = sessionStorage.getItem('currentUser');
         if (storedUser) {
           const parsedUser = JSON.parse(storedUser);
           setUser(parsedUser);
-          setLoading(false);
-          return;
         }
 
         // Try to fetch from API using JWT token cookie
@@ -35,6 +35,11 @@ export default function DashboardLayout({ children }) {
               name: result.data.companyName || result.data.email || 'User',
               organizationName: result.data.organizationName || result.data.companyName || 'Organization',
               company_name: result.data.companyName,
+              companyName: result.data.companyName,
+              phone: result.data.phone || '',
+              country: result.data.country || '',
+              state: result.data.state || '',
+              gstNumber: result.data.gstNumber || '',
               organizationId: result.data.organizationId,
             };
             setUser(userData);
@@ -96,11 +101,25 @@ export default function DashboardLayout({ children }) {
         <Navbar
           user={user}
           onMenuClick={() => setSidebarOpen(!sidebarOpen)}
+          onProfileClick={() => setIsProfilePanelOpen(true)}
         />
         <div className="flex-1 p-5 overflow-x-hidden">
           {children}
         </div>
       </div>
+
+      {isProfilePanelOpen && (
+        <ProfileEditModal
+          user={user}
+          onClose={() => setIsProfilePanelOpen(false)}
+          onUserUpdate={(updatedUser) => {
+            setUser(updatedUser);
+            if (typeof window !== 'undefined') {
+              sessionStorage.setItem('currentUser', JSON.stringify(updatedUser));
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

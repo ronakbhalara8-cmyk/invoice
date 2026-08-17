@@ -107,7 +107,7 @@ export default function ItemDetailSidebar({isOpen, onClose, item, onEdit}) {
     <>
       {/* Backdrop with fade animation */}
       <div
-        className={`fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 z-40 ${isOpen && !isClosing ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        className={`fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 z-50 ${isOpen && !isClosing ? 'opacity-100' : 'opacity-0 pointer-events-none'
           }`}
         onClick={handleClose}
       />
