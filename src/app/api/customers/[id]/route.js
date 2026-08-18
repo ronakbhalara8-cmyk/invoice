@@ -71,6 +71,7 @@ export async function PUT(request, { params }) {
       email,
       phone,
       pan,
+      currency,
       payment_terms,
       billing_address,
       shipping_address,
@@ -92,13 +93,14 @@ export async function PUT(request, { params }) {
           email = $5,
           phone = $6,
           pan = $7,
-          payment_terms = $8,
-          billing_address = $9,
-          shipping_address = $10,
-          contact_persons = $11,
-          remarks = $12,
+          currency = $8,
+          payment_terms = $9,
+          billing_address = $10,
+          shipping_address = $11,
+          contact_persons = $12,
+          remarks = $13,
           updated_at = NOW()
-        WHERE id = $13 AND organization_id = $14
+        WHERE id = $14 AND organization_id = $15
         RETURNING *
       `;
 
@@ -110,6 +112,7 @@ export async function PUT(request, { params }) {
         email || '',
         phone || '',
         pan || '',
+        currency || 'INR',
         payment_terms || '',
         JSON.stringify(billing_address || {}),
         JSON.stringify(shipping_address || {}),

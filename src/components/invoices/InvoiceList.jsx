@@ -2,10 +2,12 @@
 
 import { Download, FileText, RefreshCcw } from 'lucide-react';
 
-const displayCurrency = (value) =>
-  new Intl.NumberFormat('en-IN', {
+const normalizeCurrency = (value) => (value ? String(value).trim().toUpperCase() : 'INR');
+
+const displayCurrency = (value, currency = 'INR') =>
+  new Intl.NumberFormat(undefined, {
     style: 'currency',
-    currency: 'INR',
+    currency: normalizeCurrency(currency),
     minimumFractionDigits: 2,
   }).format(Number(value || 0));
 
@@ -52,23 +54,27 @@ export default function InvoiceList({ invoices, loading, onRefresh, onDownload }
                 </td>
               </tr>
             ) : (
-              invoices.map((invoice) => (
-                <tr key={invoice.id} className="border-t border-slate-200 transition hover:bg-slate-50">
-                  <td className="px-5 py-4 font-semibold text-slate-900">{invoice.invoice_number}</td>
-                  <td className="px-5 py-4 text-slate-700">{invoice.customer_name}</td>
-                  <td className="px-5 py-4 text-slate-700">{new Date(invoice.created_at).toLocaleDateString('en-GB')}</td>
-                  <td className="px-5 py-4 font-semibold text-slate-900">{displayCurrency(invoice.grand_total)}</td>
-                  <td className="px-5 py-4 text-right">
-                    <button
-                      type="button"
-                      onClick={() => onDownload(invoice)}
-                      className="inline-flex h-10 w-10 items-center gap-2 rounded-full bg-blue-600 px-3 py-2 text-xs font-medium text-white transition hover:bg-blue-500"
-                    >
-                      <Download className="h-5 w-5" />
-                    </button>
-                  </td>
-                </tr>
-              ))
+              invoices.map((invoice) => {
+                const invoiceCurrency = normalizeCurrency(invoice?.company_info?.currency || invoice?.currency || 'INR');
+
+                return (
+                  <tr key={invoice.id} className="border-t border-slate-200 transition hover:bg-slate-50">
+                    <td className="px-5 py-4 font-semibold text-slate-900">{invoice.invoice_number}</td>
+                    <td className="px-5 py-4 text-slate-700">{invoice.customer_name}</td>
+                    <td className="px-5 py-4 text-slate-700">{new Date(invoice.created_at).toLocaleDateString('en-GB')}</td>
+                    <td className="px-5 py-4 font-semibold text-slate-900">{displayCurrency(invoice.grand_total, invoiceCurrency)}</td>
+                    <td className="px-5 py-4 text-right">
+                      <button
+                        type="button"
+                        onClick={() => onDownload(invoice)}
+                        className="inline-flex h-10 w-10 items-center gap-2 rounded-full bg-blue-600 px-3 py-2 text-xs font-medium text-white transition hover:bg-blue-500"
+                      >
+                        <Download className="h-5 w-5" />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>

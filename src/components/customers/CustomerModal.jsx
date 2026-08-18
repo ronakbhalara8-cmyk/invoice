@@ -1,8 +1,8 @@
 "use client";
 
-import {useEffect, useMemo, useState} from 'react';
-import {toast} from 'react-toastify';
-import {X, Plus, Trash2} from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { toast } from 'react-toastify';
+import { X, Plus, Trash2 } from 'lucide-react';
 
 const createEmptyContact = () => ({
   id: Date.now() + Math.random(),
@@ -17,6 +17,7 @@ const initialBillingAddress = {
   address: '',
   city: '',
   pin_code: '',
+  email: '',
   phone: '',
 };
 
@@ -25,10 +26,11 @@ const initialShippingAddress = {
   address: '',
   city: '',
   pin_code: '',
+  email: '',
   phone: '',
 };
 
-export default function CustomerModal({isOpen, onClose, customer, mode = 'add', onCustomerAdded, onCustomerUpdated}) {
+export default function CustomerModal({ isOpen, onClose, customer, mode = 'add', onCustomerAdded, onCustomerUpdated }) {
   const [customerType, setCustomerType] = useState('Business');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -36,6 +38,7 @@ export default function CustomerModal({isOpen, onClose, customer, mode = 'add', 
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [pan, setPan] = useState('');
+  const [currency, setCurrency] = useState('INR');
   const [paymentTerms, setPaymentTerms] = useState('');
   const [billingAddress, setBillingAddress] = useState(initialBillingAddress);
   const [shippingAddress, setShippingAddress] = useState(initialShippingAddress);
@@ -43,8 +46,39 @@ export default function CustomerModal({isOpen, onClose, customer, mode = 'add', 
   const [remarks, setRemarks] = useState('');
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('other');
+  const [currencyOptions, setCurrencyOptions] = useState([]);
 
   const tabs = ['other', 'address', 'contact', 'remarks'];
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchCurrencies = async () => {
+      try {
+        const response = await fetch('/api/currencies');
+        if (!response.ok) {
+          throw new Error('Failed to load currencies');
+        }
+
+        const result = await response.json();
+        const currencies = Array.isArray(result?.data) ? result.data : [];
+
+        if (isMounted) setCurrencyOptions(currencies);
+      } catch (error) {
+        console.error('Currency fetch error:', error);
+
+        if (isMounted) {
+          setCurrencyOptions([]);
+        }
+      }
+    };
+
+    fetchCurrencies();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -57,11 +91,20 @@ export default function CustomerModal({isOpen, onClose, customer, mode = 'add', 
       setEmail(customer.email || '');
       setPhone(customer.phone || '');
       setPan(customer.pan || '');
+      setCurrency(customer.currency || 'INR');
       setPaymentTerms(customer.payment_terms || '');
       setRemarks(customer.remarks || '');
-      setBillingAddress(customer.billing_address || initialBillingAddress);
-      setShippingAddress(customer.shipping_address || initialShippingAddress);
-      setContactPersons(Array.isArray(customer.contact_persons) && customer.contact_persons.length ? customer.contact_persons.map((person) => ({...person, id: person.id || Date.now() + Math.random()})) : [createEmptyContact()]);
+      setBillingAddress({
+        ...initialBillingAddress,
+        ...(customer.billing_address || {}),
+        email: customer.billing_address?.email || '',
+      });
+      setShippingAddress({
+        ...initialShippingAddress,
+        ...(customer.shipping_address || {}),
+        email: customer.shipping_address?.email || '',
+      });
+      setContactPersons(Array.isArray(customer.contact_persons) && customer.contact_persons.length ? customer.contact_persons.map((person) => ({ ...person, id: person.id || Date.now() + Math.random() })) : [createEmptyContact()]);
     } else {
       setCustomerType('Business');
       setFirstName('');
@@ -70,15 +113,28 @@ export default function CustomerModal({isOpen, onClose, customer, mode = 'add', 
       setEmail('');
       setPhone('');
       setPan('');
+      setCurrency('INR');
       setPaymentTerms('');
       setRemarks('');
-      setBillingAddress(initialBillingAddress);
-      setShippingAddress(initialShippingAddress);
+      setBillingAddress({ ...initialBillingAddress, email: '' });
+      setShippingAddress({ ...initialShippingAddress, email: '' });
       setContactPersons([createEmptyContact()]);
     }
   }, [isOpen, customer, mode]);
 
   const totalContactPersons = useMemo(() => contactPersons.filter((person) => person.first_name || person.last_name || person.email || person.phone).length, [contactPersons]);
+  const availableCurrencies = useMemo(() => {
+    if (!currencyOptions.length) {
+      return [{ code: currency || 'INR', name: currency || 'INR' }];
+    }
+
+    const hasCurrentCurrency = currencyOptions.some((option) => option.code === currency);
+    if (!hasCurrentCurrency && currency) {
+      return [{ code: currency, name: currency }, ...currencyOptions];
+    }
+
+    return currencyOptions;
+  }, [currency, currencyOptions]);
 
   const addContactPerson = () => setContactPersons((prev) => [...prev, createEmptyContact()]);
 
@@ -90,11 +146,14 @@ export default function CustomerModal({isOpen, onClose, customer, mode = 'add', 
   };
 
   const updateContactPerson = (id, field, value) => {
-    setContactPersons((prev) => prev.map((person) => (person.id === id ? {...person, [field]: value} : person)));
+    setContactPersons((prev) => prev.map((person) => (person.id === id ? { ...person, [field]: value } : person)));
   };
 
-  const updateBillingAddress = (field, value) => setBillingAddress((prev) => ({...prev, [field]: value}));
-  const updateShippingAddress = (field, value) => setShippingAddress((prev) => ({...prev, [field]: value}));
+  const hasAddressData = (address) => Object.values(address || {}).some((value) => String(value ?? '').trim() !== '');
+  const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((value || '').trim());
+
+  const updateBillingAddress = (field, value) => setBillingAddress((prev) => ({ ...prev, [field]: value ?? '' }));
+  const updateShippingAddress = (field, value) => setShippingAddress((prev) => ({ ...prev, [field]: value ?? '' }));
 
   const resetForm = () => {
     setCustomerType('Business');
@@ -104,6 +163,7 @@ export default function CustomerModal({isOpen, onClose, customer, mode = 'add', 
     setEmail('');
     setPhone('');
     setPan('');
+    setCurrency('INR');
     setPaymentTerms('');
     setRemarks('');
     setBillingAddress(initialBillingAddress);
@@ -120,6 +180,34 @@ export default function CustomerModal({isOpen, onClose, customer, mode = 'add', 
       return;
     }
 
+    if (hasAddressData(billingAddress)) {
+      if (!billingAddress.email?.trim()) {
+        toast.error('Billing email is required when billing address is filled.');
+        setActiveTab('address');
+        return;
+      }
+
+      if (!isValidEmail(billingAddress.email)) {
+        toast.error('Please enter a valid billing email address.');
+        setActiveTab('address');
+        return;
+      }
+    }
+
+    if (hasAddressData(shippingAddress)) {
+      if (!shippingAddress.email?.trim()) {
+        toast.error('Shipping email is required when shipping address is filled.');
+        setActiveTab('address');
+        return;
+      }
+
+      if (!isValidEmail(shippingAddress.email)) {
+        toast.error('Please enter a valid shipping email address.');
+        setActiveTab('address');
+        return;
+      }
+    }
+
     const payload = {
       customer_type: customerType,
       first_name: firstName,
@@ -128,6 +216,7 @@ export default function CustomerModal({isOpen, onClose, customer, mode = 'add', 
       email,
       phone,
       pan,
+      currency,
       payment_terms: paymentTerms,
       billing_address: billingAddress,
       shipping_address: shippingAddress,
@@ -142,7 +231,7 @@ export default function CustomerModal({isOpen, onClose, customer, mode = 'add', 
 
       const response = await fetch(url, {
         method,
-        headers: {'Content-Type': 'application/json'},
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
@@ -249,6 +338,22 @@ export default function CustomerModal({isOpen, onClose, customer, mode = 'add', 
                 </div>
 
                 <div className="grid grid-cols-[180px_minmax(0,1fr)] items-center gap-4">
+                  <label className="text-[15px] font-medium text-slate-700">Currency</label>
+                  <select
+                    value={currency}
+                    onChange={(e) => setCurrency(e.target.value)}
+                    className="max-w-[220px] rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-[15px] text-slate-700 outline-none focus:border-blue-500"
+                    disabled={!availableCurrencies.length}
+                  >
+                    {availableCurrencies.map(({ code, name }) => (
+                      <option key={code} value={code}>
+                        {code} - {name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-[180px_minmax(0,1fr)] items-center gap-4">
                   <label className="text-[15px] font-medium text-slate-700">Payment Terms</label>
                   <textarea value={paymentTerms} onChange={(e) => setPaymentTerms(e.target.value)} className="max-w-[620px] rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-[15px] outline-none focus:border-blue-500" placeholder="Payment Terms" />
                 </div>
@@ -260,26 +365,61 @@ export default function CustomerModal({isOpen, onClose, customer, mode = 'add', 
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                   <h4 className="mb-4 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Billing Address</h4>
                   <div className="space-y-3">
+                    <label className="mb-1 block text-xs font-medium text-slate-700">Attention</label>
                     <input value={billingAddress.attention} onChange={(e) => updateBillingAddress('attention', e.target.value)} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500" placeholder="Attention" />
+
+                    <label className="mb-1 block text-xs font-medium text-slate-700">Address</label>
                     <textarea value={billingAddress.address} onChange={(e) => updateBillingAddress('address', e.target.value)} className="min-h-[90px] w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500" placeholder="Address" />
                     <div className="grid gap-3 sm:grid-cols-2">
-                      <input value={billingAddress.city} onChange={(e) => updateBillingAddress('city', e.target.value)} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500" placeholder="City" />
-                      <input value={billingAddress.pin_code} onChange={(e) => updateBillingAddress('pin_code', e.target.value)} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500" placeholder="Pin Code" />
+                      <div>
+                        <label className="mb-1 block text-xs font-medium text-slate-700">City</label>
+                        <input value={billingAddress.city} onChange={(e) => updateBillingAddress('city', e.target.value)} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500" placeholder="City" />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-xs font-medium text-slate-700">Pin Code</label>
+                        <input value={billingAddress.pin_code} onChange={(e) => updateBillingAddress('pin_code', e.target.value)} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500" placeholder="Pin Code" />
+                      </div>
                     </div>
-                    <input value={billingAddress.phone} onChange={(e) => updateBillingAddress('phone', e.target.value)} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500" placeholder="Phone" />
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div>
+                        <label className="mb-1 block text-xs font-medium text-slate-700">Email</label>
+                        <input type="email" value={billingAddress.email} onChange={(e) => updateBillingAddress('email', e.target.value)} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500" placeholder="Email" required={hasAddressData(billingAddress)} />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-xs font-medium text-slate-700">Phone</label>
+                        <input value={billingAddress.phone} onChange={(e) => updateBillingAddress('phone', e.target.value)} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500" placeholder="Phone" />
+                      </div>
+                    </div>
                   </div>
                 </div>
 
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                   <h4 className="mb-4 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Shipping Address</h4>
                   <div className="space-y-3">
+                    <label className="mb-1 block text-xs font-medium text-slate-700">Attention</label>
                     <input value={shippingAddress.attention} onChange={(e) => updateShippingAddress('attention', e.target.value)} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500" placeholder="Attention" />
+                    <label className="mb-1 block text-xs font-medium text-slate-700">Address</label>
                     <textarea value={shippingAddress.address} onChange={(e) => updateShippingAddress('address', e.target.value)} className="min-h-[90px] w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500" placeholder="Address" />
                     <div className="grid gap-3 sm:grid-cols-2">
-                      <input value={shippingAddress.city} onChange={(e) => updateShippingAddress('city', e.target.value)} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500" placeholder="City" />
-                      <input value={shippingAddress.pin_code} onChange={(e) => updateShippingAddress('pin_code', e.target.value)} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500" placeholder="Pin Code" />
+                      <div>
+                        <label className="mb-1 block text-xs font-medium text-slate-700">City</label>
+                        <input value={shippingAddress.city} onChange={(e) => updateShippingAddress('city', e.target.value)} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500" placeholder="City" />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-xs font-medium text-slate-700">Pin Code</label>
+                        <input value={shippingAddress.pin_code} onChange={(e) => updateShippingAddress('pin_code', e.target.value)} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500" placeholder="Pin Code" />
+                      </div>
                     </div>
-                    <input value={shippingAddress.phone} onChange={(e) => updateShippingAddress('phone', e.target.value)} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500" placeholder="Phone" />
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div>
+                        <label className="mb-1 block text-xs font-medium text-slate-700">Email</label>
+                        <input type="email" value={shippingAddress.email} onChange={(e) => updateShippingAddress('email', e.target.value)} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500" placeholder="Email" required={hasAddressData(shippingAddress)} />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-xs font-medium text-slate-700">Phone</label>
+                        <input value={shippingAddress.phone} onChange={(e) => updateShippingAddress('phone', e.target.value)} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500" placeholder="Phone" />
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -291,11 +431,23 @@ export default function CustomerModal({isOpen, onClose, customer, mode = 'add', 
                 <div className="space-y-4">
                   {contactPersons.map((person, index) => (
                     <div key={person.id} className="flex items-center gap-4">
-                      <input value={person.first_name} onChange={(e) => updateContactPerson(person.id, 'first_name', e.target.value)} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500" placeholder="First Name" />
-                      <input value={person.last_name} onChange={(e) => updateContactPerson(person.id, 'last_name', e.target.value)} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500" placeholder="Last Name" />
-                      <input value={person.email} onChange={(e) => updateContactPerson(person.id, 'email', e.target.value)} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500" placeholder="Email Address" />
-                      <input value={person.phone} onChange={(e) => updateContactPerson(person.id, 'phone', e.target.value)} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500" placeholder="Phone Number" />
-                      <button type="button" onClick={() => removeContactPerson(person.id)} className="rounded-md p-2 text-red-500 transition hover:bg-red-50">
+                      <div>
+                        <label className="text-sm font-medium text-slate-700">First Name</label>
+                        <input value={person.first_name} onChange={(e) => updateContactPerson(person.id, 'first_name', e.target.value)} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500" placeholder="First Name" />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-slate-700">Last Name</label>
+                        <input value={person.last_name} onChange={(e) => updateContactPerson(person.id, 'last_name', e.target.value)} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500" placeholder="Last Name" />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-slate-700">Email</label>
+                        <input value={person.email} onChange={(e) => updateContactPerson(person.id, 'email', e.target.value)} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500" placeholder="Email Address" />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-slate-700">Phone</label>
+                        <input value={person.phone} onChange={(e) => updateContactPerson(person.id, 'phone', e.target.value)} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500" placeholder="Phone Number" />
+                      </div>
+                      <button type="button" onClick={() => removeContactPerson(person.id)} className="rounded-md p-2 mt-5 text-red-500 transition hover:bg-red-50">
                         <Trash2 size={15} />
                       </button>
                     </div>

@@ -1,4 +1,3 @@
-// app/organization/page.tsx
 'use client';
 
 import { Suspense, useState, useEffect } from 'react';
@@ -22,18 +21,19 @@ function OrganizationPageContent() {
     const [formData, setFormData] = useState({
         organizationName: '',
         industry: 'consulting',
-        country: '',
+        country: '', // Will be set from API
         state: '',
         currency: 'inr',
         language: 'en',
         timezone: 'gmt+5.30',
         gstRegistered: 'no',
-        address: ''
+        address: '',
+        gstNumber: ''
     });
     const [errors, setErrors] = useState({});
-
     const [welcomeName, setWelcomeName] = useState('');
     const [pendingRegistration, setPendingRegistration] = useState(null);
+    const [isStatesLoaded, setIsStatesLoaded] = useState(false);
 
     // Fetch countries on component mount
     useEffect(() => {
@@ -58,7 +58,6 @@ function OrganizationPageContent() {
             setWelcomeName(decodedName);
         }
 
-        // Log query parameters for debugging
         if (queryName || queryEmail || queryCountry || queryPhone) {
             console.log('Query parameters received:', {
                 name: queryName,
@@ -69,7 +68,7 @@ function OrganizationPageContent() {
         }
     }, [searchParams]);
 
-    // Ensure the signup data still exists before allowing this step.
+    // Ensure the signup data still exists
     useEffect(() => {
         if (typeof window === 'undefined') return;
 
@@ -92,7 +91,7 @@ function OrganizationPageContent() {
         }
     }, []);
 
-    // Load pending registration (stored by the signup page)
+    // Load pending registration
     useEffect(() => {
         try {
             if (typeof window === 'undefined') return;
@@ -103,33 +102,28 @@ function OrganizationPageContent() {
             const nameToShow = parsed.name || parsed.companyName || parsed.email || '';
             setWelcomeName(nameToShow);
 
-            const matchedCountry = countries.find((country) => {
-                const countryName = country.name || country.country_name || '';
-                return countryName.toLowerCase() === String(parsed.country || '').toLowerCase() || country.iso2?.toLowerCase() === String(parsed.country || '').toLowerCase();
-            });
-
-            const nextCountry = matchedCountry?.iso2 || parsed.country || '';
-            if (nextCountry) {
-                setFormData(prev => ({ ...prev, country: nextCountry }));
-            }
-
-            if (parsed.state) {
-                const matchedState = states.find((state) => {
-                    const stateName = state.name || '';
-                    const stateCode = state.state_code || '';
-                    return stateName.toLowerCase() === String(parsed.state).toLowerCase() || stateCode.toLowerCase() === String(parsed.state).toLowerCase();
+            if (countries.length > 0) {
+                const matchedCountry = countries.find((country) => {
+                    const countryName = country.name || country.country_name || '';
+                    const searchName = parsed.country || '';
+                    return countryName.toLowerCase() === searchName.toLowerCase() ||
+                        country.iso2?.toLowerCase() === searchName.toLowerCase();
                 });
-                const nextState = matchedState?.state_code || parsed.state || '';
-                setFormData(prev => ({ ...prev, state: nextState }));
+
+                const nextCountry = matchedCountry?.iso2 || 'IN';
+                if (nextCountry && formData.country !== nextCountry) {
+                    setFormData(prev => ({ ...prev, country: nextCountry }));
+                }
             }
         } catch (err) {
             console.error('Failed to load pending registration:', err);
         }
-    }, [countries, states]);
+    }, [countries]);
 
     // Fetch states when country changes
     useEffect(() => {
         if (formData.country) {
+            setIsStatesLoaded(false);
             fetchStates(formData.country);
         } else {
             setStates([]);
@@ -155,9 +149,11 @@ function OrganizationPageContent() {
 
             setCountries(countriesData);
 
+            // Set default country to India (IN)
             const india = countriesData.find((c) => c.iso2 === 'IN');
             if (india) {
                 setFormData(prev => ({ ...prev, country: india.iso2 }));
+                // States will be fetched via the useEffect
             } else if (countriesData.length > 0) {
                 setFormData(prev => ({ ...prev, country: countriesData[0].iso2 }));
             }
@@ -173,19 +169,49 @@ function OrganizationPageContent() {
     };
 
     const fetchStates = async (countryCode) => {
+        if (!countryCode) {
+            setStates([]);
+            setFormData(prev => ({ ...prev, state: '' }));
+            setIsStatesLoaded(true);
+            return;
+        }
+
         setLoading(prev => ({ ...prev, states: true }));
         setApiError(prev => ({ ...prev, states: '' }));
 
         try {
-            const response = await fetch(`/api/states?country=${encodeURIComponent(countryCode || '')}`);
+            console.log('Fetching states for country code:', countryCode);
+
+            const response = await fetch(`/api/states?country=${encodeURIComponent(countryCode)}`);
+
             if (!response.ok) {
                 throw new Error(`API Error: ${response.status} - ${response.statusText}`);
             }
 
             const data = await response.json();
+            console.log('States data received:', data);
+
             const statesData = Array.isArray(data) ? data : [];
             setStates(statesData);
-            setFormData(prev => ({ ...prev, state: '' }));
+            setIsStatesLoaded(true);
+
+            // If country is India, set default state to Gujarat
+            if (countryCode === 'IN') {
+                const gujarat = statesData.find(s =>
+                    s.state_code === 'GJ' ||
+                    s.name.toLowerCase() === 'gujarat'
+                );
+                if (gujarat) {
+                    setFormData(prev => ({ ...prev, state: gujarat.state_code || gujarat.id }));
+                } else if (statesData.length > 0) {
+                    setFormData(prev => ({ ...prev, state: statesData[0].state_code || statesData[0].id }));
+                } else {
+                    setFormData(prev => ({ ...prev, state: '' }));
+                }
+            } else {
+                // For other countries, clear the state field
+                setFormData(prev => ({ ...prev, state: '' }));
+            }
         } catch (error) {
             console.error('Error fetching states:', error);
             setApiError(prev => ({
@@ -194,6 +220,7 @@ function OrganizationPageContent() {
             }));
             setStates([]);
             setFormData(prev => ({ ...prev, state: '' }));
+            setIsStatesLoaded(true);
         } finally {
             setLoading(prev => ({ ...prev, states: false }));
         }
@@ -204,9 +231,11 @@ function OrganizationPageContent() {
         if (errors[field]) {
             setErrors(prev => ({ ...prev, [field]: '' }));
         }
-        // Clear state errors when changing country
         if (field === 'country') {
             setApiError(prev => ({ ...prev, states: '' }));
+            setFormData(prev => ({ ...prev, state: '' }));
+            setStates([]);
+            setIsStatesLoaded(false);
         }
     };
 
@@ -227,14 +256,8 @@ function OrganizationPageContent() {
                 newErrors.state = 'Please enter your state/province';
             }
         }
-        if (!formData.currency) {
-            newErrors.currency = 'Currency is required';
-        }
-        if (!formData.language) {
-            newErrors.language = 'Language is required';
-        }
-        if (!formData.timezone) {
-            newErrors.timezone = 'Time zone is required';
+        if (formData.gstRegistered === 'yes' && !formData.gstNumber?.trim()) {
+            newErrors.gstNumber = 'GST Number is required';
         }
 
         setErrors(newErrors);
@@ -251,9 +274,8 @@ function OrganizationPageContent() {
         setLoading(prev => ({ ...prev, submit: true }));
 
         try {
-            // Get country and state names for submission
             const selectedCountry = countries.find(c => c.iso2 === formData.country);
-            const selectedState = states.find(s => s.state_code === formData.state);
+            const selectedState = states.find(s => s.state_code === formData.state || s.id === formData.state);
 
             const submissionData = {
                 ...formData,
@@ -261,14 +283,12 @@ function OrganizationPageContent() {
                 stateName: selectedState?.name || formData.state,
             };
 
-            // Combine with pending registration (must exist)
             const registration = pendingRegistration || null;
             if (!registration) {
                 toast.error('Missing registration data. Please complete signup first.');
                 throw new Error('Missing registration data.');
             }
 
-            // Basic check: ensure email exists in pending registration
             if (!registration.email) {
                 toast.error('Registration missing email. Please return to signup and provide an email.');
                 throw new Error('Missing registration email.');
@@ -307,7 +327,6 @@ function OrganizationPageContent() {
             sessionStorage.removeItem('pendingRegistration');
             toast.success('Profile created successfully! Redirecting to dashboard...');
 
-            // Use Next.js router for proper client-side navigation with middleware check
             router.push('/dashboard');
 
         } catch (error) {
@@ -324,7 +343,6 @@ function OrganizationPageContent() {
         }
     };
 
-    // Check if selected country is India
     const isIndiaSelected = formData.country === 'IN';
 
     return (
@@ -388,8 +406,9 @@ function OrganizationPageContent() {
                                 </label>
                                 <input
                                     type="text"
-                                    className={`w-full px-4 py-2.5 ${errors.country ? 'border-red-500' : 'border-gray-300'} border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-white/50 backdrop-blur-sm`}
+                                    className={`w-full px-4 py-2.5 ${errors.organizationName ? 'border-red-500' : 'border-gray-300'} border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-white/50 backdrop-blur-sm`}
                                     placeholder="Enter organization name"
+                                    value={formData.organizationName}
                                     onChange={(e) => handleInputChange('organizationName', e.target.value)}
                                     disabled={loading.submit}
                                 />
@@ -465,7 +484,7 @@ function OrganizationPageContent() {
                                 {/* State/Union Territory */}
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                                        State {isIndiaSelected && <span className="text-red-500">*</span>}
+                                        {isIndiaSelected ? 'State' : 'State/Province'} {isIndiaSelected && <span className="text-red-500">*</span>}
                                     </label>
                                     {isIndiaSelected ? (
                                         <>
@@ -475,11 +494,11 @@ function OrganizationPageContent() {
                                                         } rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none appearance-none bg-white/50 backdrop-blur-sm transition-all`}
                                                     value={formData.state}
                                                     onChange={(e) => handleInputChange('state', e.target.value)}
-                                                    disabled={loading.states || loading.submit}
+                                                    disabled={loading.states || loading.submit || !isStatesLoaded}
                                                 >
-                                                    <option value="">Select State</option>
+                                                    <option value="">{loading.states ? 'Loading states...' : 'Select State'}</option>
                                                     {states.map((state) => (
-                                                        <option key={state.id} value={state.state_code}>
+                                                        <option key={state.id} value={state.state_code || state.id}>
                                                             {state.name}
                                                         </option>
                                                     ))}
@@ -529,7 +548,7 @@ function OrganizationPageContent() {
                                 </div>
                             </div>
 
-                            {/* Add Organization Address Link */}
+                            {/* Organization Address */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
                                     Organization Address (optional)
@@ -540,13 +559,12 @@ function OrganizationPageContent() {
                                     value={formData.address}
                                     onChange={(e) => handleInputChange('address', e.target.value)}
                                     disabled={loading.submit}
-                                    minLength={2}
-                                    maxLength={5}
+                                    rows={3}
                                 />
                             </div>
 
                             {/* GST Registration */}
-                            <div className="">
+                            <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
                                     Is this business registered for GST?
                                 </label>
@@ -576,24 +594,22 @@ function OrganizationPageContent() {
                                         <span className="text-gray-700">No</span>
                                     </label>
                                 </div>
-                                <div>
-                                    {formData.gstRegistered === 'yes' && (
+                                {formData.gstRegistered === 'yes' && (
+                                    <div className="mt-2">
                                         <input
                                             type="text"
-                                            className={`max-w-[300px] w-full mt-2 px-4 py-2.5 border ${errors.gstNumber ? 'border-red-500' : 'border-gray-300'
+                                            className={`max-w-[300px] w-full px-4 py-2.5 border ${errors.gstNumber ? 'border-red-500' : 'border-gray-300'
                                                 } rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-white/50 backdrop-blur-sm`}
                                             placeholder="Enter GST Number"
-                                            required
                                             value={formData.gstNumber || ''}
                                             onChange={(e) => handleInputChange('gstNumber', e.target.value)}
                                         />
-                                    )}
-                                    {errors.gstNumber && (
-                                        <p className="mt-1 text-sm text-red-500">{errors.gstNumber}</p>
-                                    )}
-                                </div>
+                                        {errors.gstNumber && (
+                                            <p className="mt-1 text-sm text-red-500">{errors.gstNumber}</p>
+                                        )}
+                                    </div>
+                                )}
                             </div>
-
 
                             {/* Note */}
                             <div className="bg-blue-50/50 backdrop-blur-sm rounded-lg p-4 border border-blue-100 mt-4">
@@ -638,8 +654,8 @@ function OrganizationPageContent() {
                         </form>
                     </div>
                 </div>
-            </div >
-        </div >
+            </div>
+        </div>
     );
 }
 

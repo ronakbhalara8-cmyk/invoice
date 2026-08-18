@@ -772,9 +772,13 @@ export default function Home() {
                       </div>
 
                       <input
-                        type="number"
+                        type="text"
                         value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
+                        onChange={(e) => {
+                          // Allow digits, spaces, +, -, (, ), and .
+                          const value = e.target.value.replace(/[^0-9+\s\-()\.]/g, '');
+                          setPhone(value);
+                        }}
                         placeholder="Phone Number"
                         autoComplete="tel"
                         className="min-w-0 flex-1 bg-transparent px-3 text-[15px] text-[#1f2937] outline-none placeholder:text-[#7c8490]"

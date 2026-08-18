@@ -81,6 +81,10 @@ export default function CustomerDetailSidebar({ isOpen, onClose, customer, onEdi
               <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${customer.customer_type === 'Business' ? 'bg-blue-50 text-blue-700' : 'bg-violet-50 text-violet-700'}`}>
                 {customer.customer_type || 'Individual'}
               </span>
+              <div>
+                <span className="text-xs font-medium text-gray-500">Currency:</span>
+                <span className="ml-1 text-sm font-semibold text-gray-900">{customer.currency || '-'}</span>
+              </div>
             </div>
           </div>
 
@@ -127,6 +131,7 @@ export default function CustomerDetailSidebar({ isOpen, onClose, customer, onEdi
               <p>{formatValue(billingAddress.attention)}</p>
               <p>{formatValue(billingAddress.address)}</p>
               <p>{[billingAddress.city, billingAddress.pin_code].filter(Boolean).join(', ') || '—'}</p>
+              <p>{formatValue(billingAddress.email)}</p>
               <p>{formatValue(billingAddress.phone)}</p>
             </div>
           </div>
@@ -140,6 +145,7 @@ export default function CustomerDetailSidebar({ isOpen, onClose, customer, onEdi
               <p>{formatValue(shippingAddress.attention)}</p>
               <p>{formatValue(shippingAddress.address)}</p>
               <p>{[shippingAddress.city, shippingAddress.pin_code].filter(Boolean).join(', ') || '—'}</p>
+              <p>{formatValue(shippingAddress.email)}</p>
               <p>{formatValue(shippingAddress.phone)}</p>
             </div>
           </div>
@@ -150,9 +156,9 @@ export default function CustomerDetailSidebar({ isOpen, onClose, customer, onEdi
               <span className="text-xs font-bold uppercase tracking-[0.1em] text-gray-900">Other Details</span>
             </div>
             <div className="space-y-3 text-sm text-gray-700">
-              <p><span className="text-xs font-bold uppercase tracking-[0.1em] text-gray-900">PAN :</span> {formatValue(customer.pan)}</p>
-              <p><span className="text-xs font-bold uppercase tracking-[0.1em] text-gray-900">Payment Terms :</span> {formatValue(customer.payment_terms)}</p>
-              <p><span className="text-xs font-bold uppercase tracking-[0.1em] text-gray-900">Remarks :</span> {formatValue(customer.remarks)}</p>
+              <p><span className="text-xs font-bold uppercase text-gray-900">PAN :</span> {formatValue(customer.pan)}</p>
+              <p><span className="text-xs font-bold uppercase text-gray-900">Payment Terms :</span> {formatValue(customer.payment_terms)}</p>
+              <p><span className="text-xs font-bold uppercase text-gray-900">Remarks :</span> {formatValue(customer.remarks)}</p>
             </div>
           </div>
 

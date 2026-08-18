@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS customers (
   email VARCHAR(255) DEFAULT '',
   phone VARCHAR(50) DEFAULT '',
   pan VARCHAR(50) DEFAULT '',
+  currency VARCHAR(50) DEFAULT 'INR',
   payment_terms VARCHAR(255) DEFAULT '',
   billing_address JSONB DEFAULT '{}'::jsonb,
   shipping_address JSONB DEFAULT '{}'::jsonb,
@@ -16,6 +17,10 @@ CREATE TABLE IF NOT EXISTS customers (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+ALTER TABLE customers
+  ALTER COLUMN billing_address TYPE JSONB USING billing_address::jsonb,
+  ALTER COLUMN shipping_address TYPE JSONB USING shipping_address::jsonb;
 
 CREATE INDEX IF NOT EXISTS idx_customers_organization_id
   ON customers (organization_id);

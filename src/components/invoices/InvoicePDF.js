@@ -1,4 +1,4 @@
-import {jsPDF} from 'jspdf';
+import { jsPDF } from 'jspdf';
 
 const sanitizeText = (value) => {
     if (value === null || value === undefined) return '';
@@ -34,13 +34,15 @@ function addTextBlock(doc, x, y, lines, lineHeight = 14) {
 export function downloadInvoicePdf(invoice) {
     if (!invoice) return;
 
-    const doc = new jsPDF({unit: 'pt', format: 'a4'});
+    const doc = new jsPDF({ unit: 'pt', format: 'a4' });
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     const company = invoice.company_info || {};
     const billing = invoice.billing_to || {};
     const shipping = invoice.shipping_to || {};
+    const currency = invoice.currency || 'INR';
     const items = Array.isArray(invoice.items) ? invoice.items : [];
+    const customer_name = sanitizeText(invoice.customer_name || billing.customer_name || shipping.customer_name || 'Customer');
     const invoiceNumber = sanitizeText(invoice.invoice_number || 'INV-0000');
     const invoiceDate = new Date(invoice.created_at || Date.now()).toLocaleDateString('en-GB');
     const rawSubtotalValue = items.reduce((sum, item) => {
@@ -102,23 +104,30 @@ export function downloadInvoicePdf(invoice) {
     doc.setTextColor(37, 99, 235);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(22);
-    doc.text('INVOICE', 492, currentY + 27, {align: 'center'});
+    doc.text('INVOICE', 492, currentY + 27, { align: 'center' });
 
     // Invoice details - Right side
     doc.setTextColor(80, 90, 105);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
-    doc.text('Invoice', 430, currentY + 62);
+    doc.text('Invoice', 400, currentY + 62);
     doc.setTextColor(17, 24, 39);
     doc.setFont('helvetica', 'bold');
-    doc.text(sanitizeText(invoiceNumber), 555, currentY + 62, {align: 'right'});
+    doc.text(sanitizeText(invoiceNumber), 555, currentY + 62, { align: 'right' });
 
     doc.setTextColor(80, 90, 105);
     doc.setFont('helvetica', 'normal');
-    doc.text('Date', 430, currentY + 80);
+    doc.text('Date', 400, currentY + 80);
     doc.setTextColor(17, 24, 39);
     doc.setFont('helvetica', 'bold');
-    doc.text(sanitizeText(invoiceDate), 555, currentY + 80, {align: 'right'});
+    doc.text(sanitizeText(invoiceDate), 555, currentY + 80, { align: 'right' });
+
+    doc.setTextColor(80, 90, 105);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Customer Name', 400, currentY + 98);
+    doc.setTextColor(17, 24, 39);
+    doc.setFont('helvetica', 'bold');
+    doc.text(sanitizeText(customer_name), 555, currentY + 98, { align: 'right' });
 
     // Divider
     currentY = currentY + 85 + 30;
@@ -228,17 +237,17 @@ export function downloadInvoicePdf(invoice) {
     const col1 = 58;
     const col2 = 95;
     const col3 = 270;
-    const col4 = 328;
-    const col5 = 390;
+    const col4 = 370;
+    const col5 = 440;
     const col6 = 460;
     const col7 = 530;
 
     doc.text('#', col1, currentY + 19);
     doc.text('Item & Description', col2, currentY + 19);
     doc.text('Qty', col3, currentY + 19);
-    doc.text('Rate', col4, currentY + 19, {align: 'right'});
-    doc.text('Disc.', col5, currentY + 19, {align: 'right'});
-    doc.text('Amount', col7, currentY + 19, {align: 'right'});
+    doc.text('Rate', col4, currentY + 19, { align: 'right' });
+    doc.text('Disc.', col5, currentY + 19, { align: 'right' });
+    doc.text('Amount', col7, currentY + 19, { align: 'right' });
 
     // Table rows
     let rowY = currentY + 32;
@@ -282,9 +291,9 @@ export function downloadInvoicePdf(invoice) {
         }
 
         doc.text(String(qty), col3, centerY);
-        doc.text(formatAmount(rate), col4, centerY, {align: 'right'});
-        doc.text(`${discount.toFixed(2)}%`, col5, centerY, {align: 'right'});
-        doc.text(formatAmount(amount), col7, centerY, {align: 'right'});
+        doc.text(formatAmount(rate), col4, centerY, { align: 'right' });
+        doc.text(`${discount.toFixed(2)}%`, col5, centerY, { align: 'right' });
+        doc.text(formatAmount(amount), col7, centerY, { align: 'right' });
 
         doc.setDrawColor(218, 226, 234);
         doc.line(45, rowY + rowHeight, 555, rowY + rowHeight);
@@ -310,21 +319,21 @@ export function downloadInvoicePdf(invoice) {
     doc.setTextColor(80, 90, 105);
     doc.text('Sub Total', 370, sumY);
     doc.setTextColor(17, 24, 39);
-    doc.text(formatAmount(subtotalValue), 540, sumY, {align: 'right'});
+    doc.text(currency + ' ' + formatAmount(subtotalValue), 540, sumY, { align: 'right' });
     sumY += 20;
 
     // Discount
     doc.setTextColor(80, 90, 105);
     doc.text('Discount', 370, sumY);
     doc.setTextColor(17, 24, 39);
-    doc.text(formatAmount(discountAmountValue), 540, sumY, {align: 'right'});
+    doc.text(currency + ' ' + formatAmount(discountAmountValue), 540, sumY, { align: 'right' });
     sumY += 20;
 
     // GST
     doc.setTextColor(80, 90, 105);
     doc.text(`GST (${gstRateValue}%)`, 370, sumY);
     doc.setTextColor(17, 24, 39);
-    doc.text(formatAmount(taxAmountValue), 540, sumY, {align: 'right'});
+    doc.text(currency + ' ' + formatAmount(taxAmountValue), 540, sumY, { align: 'right' });
     sumY += 20;
 
     // Divider line
@@ -337,7 +346,7 @@ export function downloadInvoicePdf(invoice) {
     doc.setFontSize(11);
     doc.setTextColor(17, 24, 39);
     doc.text('Total', 370, sumY);
-    doc.text(formatAmount(grandTotalValue), 540, sumY, {align: 'right'});
+    doc.text(currency + ' ' + formatAmount(grandTotalValue), 540, sumY, { align: 'right' });
 
     // ===== FOOTER SECTION =====
     const footerY = Math.max(summaryY + 130, 610);

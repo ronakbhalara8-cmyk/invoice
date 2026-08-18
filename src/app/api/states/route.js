@@ -1,15 +1,16 @@
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
-    const country = (searchParams.get('country') || '').trim();
+    const countryCode = (searchParams.get('country') || '').trim();
 
-    if (!country) {
+    if (!countryCode) {
       return Response.json([], { status: 200 });
     }
 
+    // Fetch all countries and states from the API
     const response = await fetch('https://countriesnow.space/api/v0.1/countries/states', {
       headers: {
-        Accept: 'application/json',
+        'Accept': 'application/json',
       },
       cache: 'no-store',
     });
@@ -24,13 +25,25 @@ export async function GET(request) {
       throw new Error('Invalid state payload');
     }
 
-    const countryEntry = result.data.find(
-      (entry) => (entry?.name || '').toLowerCase() === country.toLowerCase()
+    // Find country by ISO2 code (like 'IN') or by name
+    let countryEntry = result.data.find(
+      (entry) => (entry?.iso2 || '').toLowerCase() === countryCode.toLowerCase()
     );
 
+    // If not found by ISO2, try by name
+    if (!countryEntry) {
+      countryEntry = result.data.find(
+        (entry) => (entry?.name || '').toLowerCase() === countryCode.toLowerCase()
+      );
+    }
+
+    if (!countryEntry) {
+      return Response.json([], { status: 200 });
+    }
+
     const statesData = (countryEntry?.states || []).map((state) => ({
-      id: state.id || state.state_code || state.name,
-      state_code: state.state_code || state.stateCode || state.code || '',
+      id: state.state_code || state.name,
+      state_code: state.state_code || state.name.substring(0, 2).toUpperCase(),
       name: state.name || state.state || '',
     }));
 

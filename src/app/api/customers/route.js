@@ -35,12 +35,20 @@ export async function GET(request) {
 
       return NextResponse.json({
         success: true,
-        data: result.rows.map((customer) => ({
-          ...customer,
-          billing_address: customer.billing_address || {},
-          shipping_address: customer.shipping_address || {},
-          contact_persons: Array.isArray(customer.contact_persons) ? customer.contact_persons : [],
-        })),
+        data: result.rows.map((customer) => {
+          const customerName = [customer.first_name, customer.last_name]
+            .filter(Boolean)
+            .join(' ')
+            .trim() || customer.company_name || 'Customer';
+
+          return {
+            ...customer,
+            customer_name: customerName,
+            billing_address: customer.billing_address || {},
+            shipping_address: customer.shipping_address || {},
+            contact_persons: Array.isArray(customer.contact_persons) ? customer.contact_persons : [],
+          };
+        }),
       });
     } finally {
       client.release();
@@ -67,6 +75,7 @@ export async function POST(request) {
       email,
       phone,
       pan,
+      currency,
       payment_terms,
       billing_address,
       shipping_address,
@@ -93,6 +102,7 @@ export async function POST(request) {
           email,
           phone,
           pan,
+          currency,
           payment_terms,
           billing_address,
           shipping_address,
@@ -100,7 +110,7 @@ export async function POST(request) {
           remarks,
           created_at,
           updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), NOW())
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW(), NOW())
         RETURNING *
       `;
 
@@ -113,6 +123,7 @@ export async function POST(request) {
         email || '',
         phone || '',
         pan || '',
+        currency || 'INR',
         payment_terms || '',
         JSON.stringify(billing_address || {}),
         JSON.stringify(shipping_address || {}),
@@ -124,10 +135,16 @@ export async function POST(request) {
       await client.query('COMMIT');
 
       const createdCustomer = result.rows[0];
+      const customerName = [createdCustomer.first_name, createdCustomer.last_name]
+        .filter(Boolean)
+        .join(' ')
+        .trim() || createdCustomer.company_name || 'Customer';
+
       return NextResponse.json({
         success: true,
         data: {
           ...createdCustomer,
+          customer_name: customerName,
           billing_address: createdCustomer.billing_address || {},
           shipping_address: createdCustomer.shipping_address || {},
           contact_persons: Array.isArray(createdCustomer.contact_persons) ? createdCustomer.contact_persons : [],

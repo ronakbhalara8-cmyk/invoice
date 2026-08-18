@@ -77,6 +77,7 @@ export async function GET(request) {
         success: true,
         data: result.rows.map((invoice) => ({
           ...invoice,
+          currency: invoice.company_info?.currency || 'INR',
           company_info: invoice.company_info || {},
           billing_to: invoice.billing_to || {},
           shipping_to: invoice.shipping_to || {},
@@ -101,6 +102,9 @@ export async function POST(request) {
 
     const body = await request.json();
     const {
+      currency,
+      customer_first_name,
+      customer_last_name,
       invoiceNumber,
       companyInfo,
       billingTo,
@@ -118,8 +122,13 @@ export async function POST(request) {
       return NextResponse.json({ success: false, message: 'Invalid invoice payload' }, { status: 400 });
     }
 
-    const customerName = shippingTo?.customer_name || billingTo.customer_name || 'Customer';
+    // Merge customer's first_name and last_name for database storage
+    const customerName = [customer_first_name, customer_last_name]
+      .filter(Boolean)
+      .join(' ')
+      .trim() || billingTo.customer_name || shippingTo?.customer_name || 'Customer';
     const normalizedItems = items.map((item) => ({
+      item_id: item.item_id || null,
       name: item.name,
       qty: Number(item.qty || 0),
       rate: Number(item.rate || 0),
@@ -161,11 +170,16 @@ export async function POST(request) {
         RETURNING id
       `;
 
+      const companyInfoWithCurrency = {
+        ...companyInfo,
+        currency: currency || 'INR',
+      };
+
       const insertValues = [
         auth.organizationId,
         generatedNumber,
         customerName,
-        JSON.stringify(companyInfo || {}),
+        JSON.stringify(companyInfoWithCurrency || {}),
         JSON.stringify(billingTo || {}),
         JSON.stringify(shippingTo || {}),
         JSON.stringify(normalizedItems),
@@ -186,7 +200,8 @@ export async function POST(request) {
           id: invoiceId,
           invoice_number: generatedNumber,
           customer_name: customerName,
-          company_info: companyInfo,
+          currency: currency || 'INR',
+          company_info: companyInfoWithCurrency,
           billing_to: billingTo,
           shipping_to: shippingTo,
           items: normalizedItems,
