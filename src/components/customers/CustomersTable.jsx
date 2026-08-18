@@ -74,7 +74,7 @@ export default function CustomersTable({
 
   const renderCustomerName = (customer) => {
     const fullName = [customer.first_name, customer.last_name].filter(Boolean).join(' ') || 'Unnamed Customer';
-    return customer.customer_type === 'Business' ? customer.company_name || fullName : fullName;
+    return fullName
   };
 
   return (
