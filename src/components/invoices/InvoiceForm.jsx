@@ -235,9 +235,19 @@ export default function InvoiceForm({onCancel, onInvoiceCreated}) {
                 body: JSON.stringify(payload),
             });
 
-            const result = await response.json();
-            if (!response.ok || !result.success) {
-                throw new Error(result.message || 'Unable to create invoice.');
+            const text = await response.text();
+            let result = null;
+            if (text) {
+                try {
+                    result = JSON.parse(text);
+                } catch (parseError) {
+                    console.error('Invalid JSON returned while creating invoice:', parseError, text.slice(0, 300));
+                    throw new Error('The server returned an invalid response while creating the invoice.');
+                }
+            }
+
+            if (!response.ok || !result?.success) {
+                throw new Error(result?.message || 'Unable to create invoice.');
             }
 
             toast.success('Invoice generated successfully.');
@@ -293,7 +303,7 @@ export default function InvoiceForm({onCancel, onInvoiceCreated}) {
                             value={companyInfo.company_address}
                             onChange={(event) => setCompanyInfo((prev) => ({...prev, company_address: event.target.value}))}
                             className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white"
-                            placeholder="123 Business Avenue, Ahmedabad"
+                            placeholder="Enter your company address"
                         />
                     </div>
                     <div className="space-y-2 md:col-span-3">

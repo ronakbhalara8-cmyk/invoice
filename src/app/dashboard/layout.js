@@ -4,6 +4,17 @@ import Sidebar from '@/components/common/Sidebar';
 import Navbar from '@/components/common/Navbar';
 import ProfileEditModal from '@/components/common/ProfileEditModal';
 
+const parseJsonSafely = (value, fallback = null) => {
+  if (typeof value !== 'string' || !value.trim()) return fallback;
+
+  try {
+    return JSON.parse(value);
+  } catch (error) {
+    console.error('Failed to parse stored JSON data:', error);
+    return fallback;
+  }
+};
+
 export default function DashboardLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -17,18 +28,18 @@ export default function DashboardLayout({ children }) {
         setLoading(true);
 
         // Use cached user data as a quick fallback, but still refresh from the API
-        const storedUser = sessionStorage.getItem('currentUser');
+        const storedUser = parseJsonSafely(sessionStorage.getItem('currentUser'));
         if (storedUser) {
-          const parsedUser = JSON.parse(storedUser);
-          setUser(parsedUser);
+          setUser(storedUser);
         }
 
         // Try to fetch from API using JWT token cookie
         const response = await fetch('/api/auth/user');
 
         if (response.ok) {
-          const result = await response.json();
-          if (result.data) {
+          const text = await response.text();
+          const result = text ? JSON.parse(text) : null;
+          if (result?.data) {
             const userData = {
               id: result.data.userId,
               email: result.data.email,
@@ -48,14 +59,13 @@ export default function DashboardLayout({ children }) {
           }
         } else {
           // Fallback to pendingRegistration in sessionStorage
-          const pending = sessionStorage.getItem('pendingRegistration');
+          const pending = parseJsonSafely(sessionStorage.getItem('pendingRegistration'));
           if (pending) {
-            const parsed = JSON.parse(pending);
             const userData = {
-              name: parsed.companyName || parsed.name || parsed.email || 'User',
-              email: parsed.email || '',
-              organizationName: parsed.companyName || parsed.name || 'Organization',
-              company_name: parsed.companyName || parsed.name || 'Organization',
+              name: pending.companyName || pending.name || pending.email || 'User',
+              email: pending.email || '',
+              organizationName: pending.companyName || pending.name || 'Organization',
+              company_name: pending.companyName || pending.name || 'Organization',
             };
             setUser(userData);
           }
@@ -64,14 +74,13 @@ export default function DashboardLayout({ children }) {
         console.error('Failed to load user profile:', error);
         // Fallback to pendingRegistration
         try {
-          const pending = sessionStorage.getItem('pendingRegistration');
+          const pending = parseJsonSafely(sessionStorage.getItem('pendingRegistration'));
           if (pending) {
-            const parsed = JSON.parse(pending);
             const userData = {
-              name: parsed.companyName || parsed.name || parsed.email || 'User',
-              email: parsed.email || '',
-              organizationName: parsed.companyName || parsed.name || 'Organization',
-              company_name: parsed.companyName || parsed.name || 'Organization',
+              name: pending.companyName || pending.name || pending.email || 'User',
+              email: pending.email || '',
+              organizationName: pending.companyName || pending.name || 'Organization',
+              company_name: pending.companyName || pending.name || 'Organization',
             };
             setUser(userData);
           }

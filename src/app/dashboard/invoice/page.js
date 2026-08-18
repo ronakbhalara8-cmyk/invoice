@@ -6,6 +6,20 @@ import InvoiceForm from '@/components/invoices/InvoiceForm';
 import InvoiceList from '@/components/invoices/InvoiceList';
 import {downloadInvoicePdf} from '@/components/invoices/InvoicePDF';
 
+const parseJsonSafely = async (response) => {
+    if (!response) return null;
+
+    const text = await response.text();
+    if (!text) return null;
+
+    try {
+        return JSON.parse(text);
+    } catch (error) {
+        console.error('Invalid JSON response:', error, text.slice(0, 300));
+        throw new Error('Server returned an invalid JSON response.');
+    }
+};
+
 export default function InvoicePage() {
     const [showForm, setShowForm] = useState(false);
     const [invoices, setInvoices] = useState([]);
@@ -15,9 +29,9 @@ export default function InvoicePage() {
         try {
             setLoading(true);
             const response = await fetch('/api/invoices');
-            const result = await response.json();
+            const result = await parseJsonSafely(response);
 
-            if (result.success) {
+            if (result?.success) {
                 setInvoices(result.data || []);
             } else {
                 setInvoices([]);
