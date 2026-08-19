@@ -429,11 +429,6 @@ export default function Home() {
       return;
     }
 
-    if (!companyName?.trim()) {
-      toast.error("Please enter a company name.");
-      return;
-    }
-
     if (!email?.trim()) {
       toast.error("Please enter an email address.");
       return;

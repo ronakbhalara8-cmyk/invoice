@@ -49,15 +49,6 @@ function OrganizationPageContent() {
         const queryCountry = searchParams.get('country');
         const queryPhone = searchParams.get('phone');
 
-        if (queryName) {
-            const decodedName = decodeURIComponent(queryName);
-            setFormData(prev => ({
-                ...prev,
-                organizationName: decodedName
-            }));
-            setWelcomeName(decodedName);
-        }
-
         if (queryName || queryEmail || queryCountry || queryPhone) {
             console.log('Query parameters received:', {
                 name: queryName,
@@ -244,6 +235,7 @@ function OrganizationPageContent() {
 
         if (!formData.organizationName.trim()) {
             newErrors.organizationName = 'Organization name is required';
+            toast.error('Organization name is required');
         }
         if (!formData.country) {
             newErrors.country = 'Please select a country';
@@ -376,7 +368,7 @@ function OrganizationPageContent() {
                         {/* Welcome Message */}
                         <div className="mb-8">
                             <h1 className="text-2xl font-bold text-gray-900">
-                                Welcome aboard, {welcomeName || 'there'}! 😊
+                                Welcome aboard, {welcomeName ? welcomeName.split('@')[0] : 'there'}! 😊
                             </h1>
                             <p className="text-gray-600 mt-1">
                                 Enter your organization details to get started with Invoice.
@@ -408,7 +400,6 @@ function OrganizationPageContent() {
                                     type="text"
                                     className={`w-full px-4 py-2.5 ${errors.organizationName ? 'border-red-500' : 'border-gray-300'} border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-white/50 backdrop-blur-sm`}
                                     placeholder="Enter organization name"
-                                    value={formData.organizationName}
                                     onChange={(e) => handleInputChange('organizationName', e.target.value)}
                                     disabled={loading.submit}
                                 />
