@@ -10,25 +10,23 @@ function generateInvoiceNumberForDate(existingNumbers = []) {
     existingNumbers
       .filter(num => num && num.startsWith('INV-'))
       .map(num => parseInt(num.replace('INV-', ''), 10))
-      .filter(num => !isNaN(num) && num >= 10000000 && num <= 99999999)
+      .filter(num => !isNaN(num) && num >= 0 && num <= 99999999)
   );
 
-  // Maximum attempts to find unique number (to prevent infinite loop)
-  const MAX_ATTEMPTS = 10000;
-  let attempts = 0;
-  let candidate;
+  // Start from 1 and find the next available number
+  let candidate = 1;
 
-  do {
-    // Generate random 8-digit number between 10000000 and 99999999
-    candidate = Math.floor(10000000 + Math.random() * 90000000);
-    attempts++;
+  // Find the smallest unused number
+  while (usedNumbers.has(candidate)) {
+    candidate++;
 
-    // If we've tried too many times and still no unique number
-    if (attempts > MAX_ATTEMPTS) {
-      throw new Error('Unable to generate unique invoice number after ' + MAX_ATTEMPTS + ' attempts');
+    // Safety check to prevent infinite loop
+    if (candidate > 99999999) {
+      throw new Error('Maximum invoice number limit reached (99999999)');
     }
-  } while (usedNumbers.has(candidate));
+  }
 
+  // Pad with leading zeros to make it 8 digits
   return `INV-${String(candidate).padStart(8, '0')}`;
 }
 

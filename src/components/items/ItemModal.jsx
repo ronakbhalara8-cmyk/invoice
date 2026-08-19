@@ -4,11 +4,11 @@ import { useState, useRef, useEffect } from "react";
 import { X } from "lucide-react";
 import { toast } from "react-toastify";
 
-export default function ItemModal({ 
-  isOpen, 
-  onClose, 
-  item, 
-  onItemAdded, 
+export default function ItemModal({
+  isOpen,
+  onClose,
+  item,
+  onItemAdded,
   onItemUpdated,
   mode = 'add' // 'add' or 'edit'
 }) {
@@ -240,8 +240,8 @@ export default function ItemModal({
                   <label className="block text-sm font-medium text-gray-700">Price (₹) *</label>
                   <input
                     type="number"
+                    min="1"
                     name="price"
-                    step="0.01"
                     value={formData.price}
                     onChange={handleChange}
                     placeholder="0.00"

@@ -64,23 +64,20 @@ const getCurrencySymbol = (currencyCode = DEFAULT_CURRENCY) => {
     }
 };
 
-const sanitizePhoneValue = (value = '') => value.replace(/\D/g, '').slice(0, 15);
+const sanitizePhoneValue = (value = '') => value.replace(/\D/g, '').slice(0, 10);
 
 const isValidPhoneNumber = (value = '') => {
     const digits = sanitizePhoneValue(value);
-    return digits.length === 10;
+    return digits.length === 10 && /^[6-9]/.test(digits);
 };
 
 const isValidEmail = (value = '') => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value).trim());
 
-// Check if item has name, qty, and rate filled (discount is optional)
 const isItemRowComplete = (item = {}) => {
     const name = item.name?.trim();
     const qty = Number(item.qty || 0);
     const rate = Number(item.rate || 0);
     const discount = Number(item.discount || 0);
-
-    // Only name, qty, and rate are required - discount is optional
     return Boolean(name) && qty > 0 && rate > 0 && discount >= 0 && discount <= 100;
 };
 
@@ -113,6 +110,7 @@ export default function InvoiceForm({ onCancel, onInvoiceCreated }) {
     const [openDropdownId, setOpenDropdownId] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const dropdownRefs = useRef({});
+    const [errors, setErrors] = useState({});
 
     const loadCustomers = async () => {
         try {
@@ -195,12 +193,10 @@ export default function InvoiceForm({ onCancel, onInvoiceCreated }) {
         const shippingAddress = customer.shipping_address || {};
         const selectedCurrency = normalizeCurrencyCode(customer.currency);
 
-        // Get customer names from attention field, fallback to first_name + last_name
         const defaultCustomerName = [customer.first_name, customer.last_name].filter(Boolean).join(' ').trim() || customer.company_name || 'Customer';
         const billingCustomerName = billingAddress.attention || defaultCustomerName;
         const shippingCustomerName = shippingAddress.attention || defaultCustomerName;
 
-        // Store the actual customer's first_name and last_name for database
         setSelectedCustomerFirstName(customer.first_name || '');
         setSelectedCustomerLastName(customer.last_name || '');
 
@@ -225,6 +221,7 @@ export default function InvoiceForm({ onCancel, onInvoiceCreated }) {
             phone: sanitizePhoneValue(shippingAddress.phone || billingAddress.phone || customer.phone || ''),
         });
         setCurrencyCode(selectedCurrency);
+        setErrors({});
     };
 
     const subtotal = useMemo(
@@ -259,17 +256,12 @@ export default function InvoiceForm({ onCancel, onInvoiceCreated }) {
                 return { ...item, [field]: value };
             });
 
-            // Find the active item that was just updated
             const activeItem = updatedItems.find((item) => item.id === id);
             const isLastRow = updatedItems.at(-1)?.id === id;
-
-            // Check if the last row is complete (name, qty, rate are filled - discount is optional)
             const lastRow = updatedItems.at(-1);
             const isLastRowComplete = lastRow && isItemRowComplete(lastRow);
 
-            // Add new row if the last row is complete and it's the one being edited or already complete
             if (isLastRow && isLastRowComplete) {
-                // Check if there's already an empty row at the end
                 const hasEmptyRow = updatedItems.some((item) => !item.name?.trim() && item.qty === 1 && item.rate === 0);
                 if (!hasEmptyRow) {
                     return [...updatedItems, emptyItem()];
@@ -287,9 +279,7 @@ export default function InvoiceForm({ onCancel, onInvoiceCreated }) {
     const removeItemRow = (id) => {
         setItems((prev) => {
             if (prev.length === 1) return [emptyItem()];
-            // Don't remove the last row if it's the only one with data
             const filtered = prev.filter((item) => item.id !== id);
-            // If all items are removed, add an empty one
             if (filtered.length === 0) {
                 return [emptyItem()];
             }
@@ -307,62 +297,90 @@ export default function InvoiceForm({ onCancel, onInvoiceCreated }) {
         }
     };
 
+    const validateForm = () => {
+        const newErrors = {};
+
+        if (!companyInfo.company_name?.trim()) {
+            newErrors.companyName = 'Company name is required';
+        }
+
+        if (!companyInfo.company_address?.trim()) {
+            newErrors.companyAddress = 'Company address is required';
+        }
+
+        if (!billingTo.customer_name?.trim()) {
+            newErrors.billingCustomerName = 'Billing customer name is required';
+        }
+
+        if (!billingTo.company_name?.trim()) {
+            newErrors.billingCompanyName = 'Billing company name is required';
+        }
+
+        if (!billingTo.address?.trim()) {
+            newErrors.billingAddress = 'Billing address is required';
+        }
+
+        if (!billingTo.email?.trim()) {
+            newErrors.billingEmail = 'Billing email is required';
+        } else if (!isValidEmail(billingTo.email)) {
+            newErrors.billingEmail = 'Please enter a valid billing email address';
+        }
+
+        if (!billingTo.phone?.trim()) {
+            newErrors.billingPhone = 'Billing phone is required';
+        } else if (!isValidPhoneNumber(billingTo.phone)) {
+            newErrors.billingPhone = 'Phone must be 10 digits starting with 6, 7, 8, or 9';
+        }
+
+        if (!shippingTo.customer_name?.trim()) {
+            newErrors.shippingCustomerName = 'Shipping customer name is required';
+        }
+
+        if (!shippingTo.company_name?.trim()) {
+            newErrors.shippingCompanyName = 'Shipping company name is required';
+        }
+
+        if (!shippingTo.address?.trim()) {
+            newErrors.shippingAddress = 'Shipping address is required';
+        }
+
+        if (!shippingTo.email?.trim()) {
+            newErrors.shippingEmail = 'Shipping email is required';
+        } else if (!isValidEmail(shippingTo.email)) {
+            newErrors.shippingEmail = 'Please enter a valid shipping email address';
+        }
+
+        if (!shippingTo.phone?.trim()) {
+            newErrors.shippingPhone = 'Shipping phone is required';
+        } else if (!isValidPhoneNumber(shippingTo.phone)) {
+            newErrors.shippingPhone = 'Phone must be 10 digits starting with 6, 7, 8, or 9';
+        }
+
+        const validItems = items.filter((item) => item.name?.trim());
+        if (validItems.length === 0) {
+            newErrors.items = 'At least one item is required';
+        } else {
+            const incompleteItems = items.filter(
+                (item) => item.name?.trim() && (!item.qty || item.qty <= 0 || !item.rate || item.rate <= 0)
+            );
+            if (incompleteItems.length > 0) {
+                newErrors.items = 'Please fill all item fields (name, qty, and rate)';
+            }
+        }
+
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
+
     const handleSubmit = async (event) => {
         event.preventDefault();
 
+        if (!validateForm()) {
+            toast.error('Please fix all validation errors.');
+            return;
+        }
+
         const validItems = items.filter((item) => item.name?.trim());
-        if (!companyInfo.company_name || validItems.length === 0) {
-            toast.error('Please fill company info and at least one item.');
-            return;
-        }
-
-        const requiredBillingFields = [
-            ['customer_name', billingTo.customer_name],
-            ['company_name', billingTo.company_name],
-            ['address', billingTo.address],
-            ['email', billingTo.email],
-            ['phone', billingTo.phone],
-        ];
-
-        const missingBillingField = requiredBillingFields.find(([, value]) => !String(value || '').trim());
-        if (missingBillingField) {
-            toast.error('Please fill all Billing To fields before generating the invoice.');
-            return;
-        }
-
-        if (!isValidEmail(billingTo.email)) {
-            toast.error('Please enter a valid billing email address.');
-            return;
-        }
-
-        if (!isValidPhoneNumber(billingTo.phone)) {
-            toast.error('Please enter a valid billing mobile number with exactly 10 digits.');
-            return;
-        }
-
-        const requiredShippingFields = [
-            ['customer_name', shippingTo.customer_name],
-            ['company_name', shippingTo.company_name],
-            ['address', shippingTo.address],
-            ['email', shippingTo.email],
-            ['phone', shippingTo.phone],
-        ];
-
-        const missingShippingField = requiredShippingFields.find(([, value]) => !String(value || '').trim());
-        if (missingShippingField) {
-            toast.error('Please fill all Shipping To fields before generating the invoice.');
-            return;
-        }
-
-        if (!isValidEmail(shippingTo.email)) {
-            toast.error('Please enter a valid shipping email address.');
-            return;
-        }
-
-        if (!isValidPhoneNumber(shippingTo.phone)) {
-            toast.error('Please enter a valid shipping mobile number with exactly 10 digits.');
-            return;
-        }
 
         const payload = {
             customer_first_name: selectedCustomerFirstName,
@@ -435,7 +453,6 @@ export default function InvoiceForm({ onCancel, onInvoiceCreated }) {
         }
     };
 
-    // Get filtered items for dropdown based on search term
     const getFilteredItems = (currentItemId) => {
         const usedItemIds = new Set(
             items
@@ -497,13 +514,17 @@ export default function InvoiceForm({ onCancel, onInvoiceCreated }) {
                         </select>
                     </div>
                     <div className="space-y-2">
-                        <label className="text-sm font-medium text-slate-700">Company name</label>
+                        <label className="text-sm font-medium text-slate-700">Company name <span className="text-red-500">*</span></label>
                         <input
                             value={companyInfo.company_name}
-                            onChange={(event) => setCompanyInfo((prev) => ({ ...prev, company_name: event.target.value }))}
-                            className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white"
+                            onChange={(event) => {
+                                setCompanyInfo((prev) => ({ ...prev, company_name: event.target.value }));
+                                if (errors.companyName) setErrors({ ...errors, companyName: '' });
+                            }}
+                            className={`w-full rounded-xl border ${errors.companyName ? 'border-red-500' : 'border-slate-200'} bg-slate-50 px-3 py-2.5 text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white`}
                             placeholder="Acme Pvt Ltd"
                         />
+                        {errors.companyName && <p className="mt-1 text-xs text-red-500">{errors.companyName}</p>}
                     </div>
                     <div className="space-y-2">
                         <label className="text-sm font-medium text-slate-700">Currency</label>
@@ -514,13 +535,17 @@ export default function InvoiceForm({ onCancel, onInvoiceCreated }) {
                         />
                     </div>
                     <div className="space-y-2 md:col-span-2">
-                        <label className="text-sm font-medium text-slate-700">Company address</label>
+                        <label className="text-sm font-medium text-slate-700">Company address <span className="text-red-500">*</span></label>
                         <input
-                            onChange={(event) => setCompanyInfo((prev) => ({ ...prev, company_address: event.target.value }))}
-                            className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white"
+                            value={companyInfo.company_address}
+                            onChange={(event) => {
+                                setCompanyInfo((prev) => ({ ...prev, company_address: event.target.value }));
+                                if (errors.companyAddress) setErrors({ ...errors, companyAddress: '' });
+                            }}
+                            className={`w-full rounded-xl border ${errors.companyAddress ? 'border-red-500' : 'border-slate-200'} bg-slate-50 px-3 py-2.5 text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white`}
                             placeholder="Enter your company address"
-                            required
                         />
+                        {errors.companyAddress && <p className="text-xs text-red-500">{errors.companyAddress}</p>}
                     </div>
                     <div className="space-y-2 md:col-span-3">
                         <label className="text-sm font-medium text-slate-700">Company GST Number</label>
@@ -537,45 +562,72 @@ export default function InvoiceForm({ onCancel, onInvoiceCreated }) {
                     <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                         <h3 className="mb-4 text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Billing To</h3>
                         <div className="space-y-3">
-                            <input
-                                required
-                                value={billingTo.customer_name}
-                                onChange={(event) => setBillingTo((prev) => ({ ...prev, customer_name: event.target.value }))}
-                                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-blue-500"
-                                placeholder="Enter your name"
-                            />
-                            <input
-                                required
-                                value={billingTo.company_name}
-                                onChange={(event) => setBillingTo((prev) => ({ ...prev, company_name: event.target.value }))}
-                                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-blue-500"
-                                placeholder="Company name"
-                            />
-                            <textarea
-                                required
-                                value={billingTo.address}
-                                onChange={(event) => setBillingTo((prev) => ({ ...prev, address: event.target.value }))}
-                                className="min-h-[90px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-blue-500"
-                                placeholder="Billing address"
-                            />
+                            <div>
+                                <input
+                                    value={billingTo.customer_name}
+                                    onChange={(event) => {
+                                        setBillingTo((prev) => ({ ...prev, customer_name: event.target.value }));
+                                        if (errors.billingCustomerName) setErrors({ ...errors, billingCustomerName: '' });
+                                    }}
+                                    className={`w-full rounded-xl border ${errors.billingCustomerName ? 'border-red-500' : 'border-slate-200'} bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-blue-500`}
+                                    placeholder="Enter your name"
+                                />
+                                {errors.billingCustomerName && <p className="mt-1 text-xs text-red-500">{errors.billingCustomerName}</p>}
+                            </div>
+                            <div>
+                                <input
+                                    value={billingTo.company_name}
+                                    onChange={(event) => {
+                                        setBillingTo((prev) => ({ ...prev, company_name: event.target.value }));
+                                        if (errors.billingCompanyName) setErrors({ ...errors, billingCompanyName: '' });
+                                    }}
+                                    className={`w-full rounded-xl border ${errors.billingCompanyName ? 'border-red-500' : 'border-slate-200'} bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-blue-500`}
+                                    placeholder="Company name"
+                                />
+                                {errors.billingCompanyName && <p className="mt-1 text-xs text-red-500">{errors.billingCompanyName}</p>}
+                            </div>
+                            <div>
+                                <textarea
+                                    value={billingTo.address}
+                                    onChange={(event) => {
+                                        setBillingTo((prev) => ({ ...prev, address: event.target.value }));
+                                        if (errors.billingAddress) setErrors({ ...errors, billingAddress: '' });
+                                    }}
+                                    className={`min-h-[90px] w-full rounded-xl border ${errors.billingAddress ? 'border-red-500' : 'border-slate-200'} bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-blue-500`}
+                                    placeholder="Billing address"
+                                />
+                                {errors.billingAddress && <p className="mt-1 text-xs text-red-500">{errors.billingAddress}</p>}
+                            </div>
                             <div className="grid gap-3 sm:grid-cols-2">
-                                <input
-                                    type='email'
-                                    required
-                                    value={billingTo.email}
-                                    onChange={(event) => setBillingTo((prev) => ({ ...prev, email: event.target.value }))}
-                                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-blue-500"
-                                    placeholder="Email"
-                                />
-                                <input
-                                    type='tel'
-                                    required
-                                    inputMode="numeric"
-                                    value={billingTo.phone}
-                                    onChange={(event) => setBillingTo((prev) => ({ ...prev, phone: sanitizePhoneValue(event.target.value) }))}
-                                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-blue-500"
-                                    placeholder="Phone"
-                                />
+                                <div>
+                                    <input
+                                        type='email'
+                                        value={billingTo.email}
+                                        onChange={(event) => {
+                                            setBillingTo((prev) => ({ ...prev, email: event.target.value }));
+                                            if (errors.billingEmail) setErrors({ ...errors, billingEmail: '' });
+                                        }}
+                                        className={`w-full rounded-xl border ${errors.billingEmail ? 'border-red-500' : 'border-slate-200'} bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-blue-500`}
+                                        placeholder="Email"
+                                    />
+                                    {errors.billingEmail && <p className="mt-1 text-xs text-red-500">{errors.billingEmail}</p>}
+                                </div>
+                                <div>
+                                    <input
+                                        type='tel'
+                                        inputMode="numeric"
+                                        value={billingTo.phone}
+                                        onChange={(event) => {
+                                            const sanitized = sanitizePhoneValue(event.target.value);
+                                            setBillingTo((prev) => ({ ...prev, phone: sanitized }));
+                                            if (errors.billingPhone) setErrors({ ...errors, billingPhone: '' });
+                                        }}
+                                        className={`w-full rounded-xl border ${errors.billingPhone ? 'border-red-500' : 'border-slate-200'} bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-blue-500`}
+                                        placeholder="Phone (10 digits)"
+                                        maxLength={10}
+                                    />
+                                    {errors.billingPhone && <p className="mt-1 text-xs text-red-500">{errors.billingPhone}</p>}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -583,45 +635,72 @@ export default function InvoiceForm({ onCancel, onInvoiceCreated }) {
                     <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                         <h3 className="mb-4 text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Shipping To</h3>
                         <div className="space-y-3">
-                            <input
-                                required
-                                value={shippingTo.customer_name}
-                                onChange={(event) => setShippingTo((prev) => ({ ...prev, customer_name: event.target.value }))}
-                                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-blue-500"
-                                placeholder="Customer name"
-                            />
-                            <input
-                                required
-                                value={shippingTo.company_name}
-                                onChange={(event) => setShippingTo((prev) => ({ ...prev, company_name: event.target.value }))}
-                                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-blue-500"
-                                placeholder="Company name"
-                            />
-                            <textarea
-                                required
-                                value={shippingTo.address}
-                                onChange={(event) => setShippingTo((prev) => ({ ...prev, address: event.target.value }))}
-                                className="min-h-[90px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-blue-500"
-                                placeholder="Shipping address"
-                            />
+                            <div>
+                                <input
+                                    value={shippingTo.customer_name}
+                                    onChange={(event) => {
+                                        setShippingTo((prev) => ({ ...prev, customer_name: event.target.value }));
+                                        if (errors.shippingCustomerName) setErrors({ ...errors, shippingCustomerName: '' });
+                                    }}
+                                    className={`w-full rounded-xl border ${errors.shippingCustomerName ? 'border-red-500' : 'border-slate-200'} bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-blue-500`}
+                                    placeholder="Customer name"
+                                />
+                                {errors.shippingCustomerName && <p className="mt-1 text-xs text-red-500">{errors.shippingCustomerName}</p>}
+                            </div>
+                            <div>
+                                <input
+                                    value={shippingTo.company_name}
+                                    onChange={(event) => {
+                                        setShippingTo((prev) => ({ ...prev, company_name: event.target.value }));
+                                        if (errors.shippingCompanyName) setErrors({ ...errors, shippingCompanyName: '' });
+                                    }}
+                                    className={`w-full rounded-xl border ${errors.shippingCompanyName ? 'border-red-500' : 'border-slate-200'} bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-blue-500`}
+                                    placeholder="Company name"
+                                />
+                                {errors.shippingCompanyName && <p className="mt-1 text-xs text-red-500">{errors.shippingCompanyName}</p>}
+                            </div>
+                            <div>
+                                <textarea
+                                    value={shippingTo.address}
+                                    onChange={(event) => {
+                                        setShippingTo((prev) => ({ ...prev, address: event.target.value }));
+                                        if (errors.shippingAddress) setErrors({ ...errors, shippingAddress: '' });
+                                    }}
+                                    className={`min-h-[90px] w-full rounded-xl border ${errors.shippingAddress ? 'border-red-500' : 'border-slate-200'} bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-blue-500`}
+                                    placeholder="Shipping address"
+                                />
+                                {errors.shippingAddress && <p className="mt-1 text-xs text-red-500">{errors.shippingAddress}</p>}
+                            </div>
                             <div className="grid gap-3 sm:grid-cols-2">
-                                <input
-                                    type='email'
-                                    required
-                                    value={shippingTo.email}
-                                    onChange={(event) => setShippingTo((prev) => ({ ...prev, email: event.target.value }))}
-                                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-blue-500"
-                                    placeholder="Email"
-                                />
-                                <input
-                                    type='tel'
-                                    required
-                                    inputMode="numeric"
-                                    value={shippingTo.phone}
-                                    onChange={(event) => setShippingTo((prev) => ({ ...prev, phone: sanitizePhoneValue(event.target.value) }))}
-                                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-blue-500"
-                                    placeholder="Phone"
-                                />
+                                <div>
+                                    <input
+                                        type='email'
+                                        value={shippingTo.email}
+                                        onChange={(event) => {
+                                            setShippingTo((prev) => ({ ...prev, email: event.target.value }));
+                                            if (errors.shippingEmail) setErrors({ ...errors, shippingEmail: '' });
+                                        }}
+                                        className={`w-full rounded-xl border ${errors.shippingEmail ? 'border-red-500' : 'border-slate-200'} bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-blue-500`}
+                                        placeholder="Email"
+                                    />
+                                    {errors.shippingEmail && <p className="mt-1 text-xs text-red-500">{errors.shippingEmail}</p>}
+                                </div>
+                                <div>
+                                    <input
+                                        type='tel'
+                                        inputMode="numeric"
+                                        value={shippingTo.phone}
+                                        onChange={(event) => {
+                                            const sanitized = sanitizePhoneValue(event.target.value);
+                                            setShippingTo((prev) => ({ ...prev, phone: sanitized }));
+                                            if (errors.shippingPhone) setErrors({ ...errors, shippingPhone: '' });
+                                        }}
+                                        className={`w-full rounded-xl border ${errors.shippingPhone ? 'border-red-500' : 'border-slate-200'} bg-white px-3 py-2.5 text-slate-900 outline-none focus:border-blue-500`}
+                                        placeholder="Phone (10 digits)"
+                                        maxLength={10}
+                                    />
+                                    {errors.shippingPhone && <p className="mt-1 text-xs text-red-500">{errors.shippingPhone}</p>}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -640,16 +719,22 @@ export default function InvoiceForm({ onCancel, onInvoiceCreated }) {
                         </button>
                     </div>
 
+                    {errors.items && (
+                        <div className="mb-3 rounded-lg bg-red-50 p-3 text-sm text-red-600">
+                            {errors.items}
+                        </div>
+                    )}
+
                     <div className="overflow-visible">
                         <table className="min-w-full text-left text-sm">
                             <thead>
                                 <tr className="text-slate-600">
-                                    <th className="pb-3 pr-3 text-base font-medium text-slate-700">Name</th>
-                                    <th className="pb-3 pr-3 text-base font-medium text-slate-700">Qty</th>
-                                    <th className="pb-3 pr-3 text-base font-medium text-slate-700">Rate</th>
-                                    <th className="pb-3 pr-3 text-base font-medium text-slate-700">Discount (%)</th>
-                                    <th className="pb-3 pr-3 text-base font-medium text-slate-700">Amount</th>
-                                    <th className="pb-3 pl-2 text-right text-base font-medium text-slate-700">Action</th>
+                                    <th className="pb-0 pr-3 text-base font-medium text-slate-700">Name <span className="text-red-500">*</span></th>
+                                    <th className="pb-0 pr-3 text-base font-medium text-slate-700">Qty <span className="text-red-500">*</span></th>
+                                    <th className="pb-0 pr-3 text-base font-medium text-slate-700">Rate <span className="text-red-500">*</span></th>
+                                    <th className="pb-0 pr-3 text-base font-medium text-slate-700">Discount (%)</th>
+                                    <th className="pb-0 pr-3 text-base font-medium text-slate-700">Amount</th>
+                                    <th className="pb-0 pl-2 text-right text-base font-medium text-slate-700">Action</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -662,7 +747,7 @@ export default function InvoiceForm({ onCancel, onInvoiceCreated }) {
 
                                     return (
                                         <tr key={item.id} className="align-top">
-                                            <td className="py-3 pr-3 relative">
+                                            <td className="py-2 pr-8 relative">
                                                 <div className="relative" ref={(el) => (dropdownRefs.current[item.id] = el)}>
                                                     <textarea
                                                         rows={2}
@@ -670,10 +755,8 @@ export default function InvoiceForm({ onCancel, onInvoiceCreated }) {
                                                         onClick={() => toggleDropdown(item.id)}
                                                         onChange={(e) => {
                                                             const value = e.target.value;
-                                                            // Update the item name
                                                             setItems((prev) => prev.map((row) => {
                                                                 if (row.id !== item.id) return row;
-                                                                // Check if the typed value matches any catalog item
                                                                 const matchedItem = itemCatalog.find((catalogItem) =>
                                                                     String(catalogItem.name || '').trim().toLowerCase() === String(value || '').trim().toLowerCase()
                                                                 );
@@ -688,7 +771,6 @@ export default function InvoiceForm({ onCancel, onInvoiceCreated }) {
                                                                 return { ...row, name: value, item_id: '' };
                                                             }));
 
-                                                            // Check if the current row is complete after update
                                                             setTimeout(() => {
                                                                 setItems((prev) => {
                                                                     const currentItem = prev.find((r) => r.id === item.id);
@@ -705,9 +787,8 @@ export default function InvoiceForm({ onCancel, onInvoiceCreated }) {
                                                             }, 0);
                                                         }}
                                                         placeholder="Click to select an item or type manually..."
-                                                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-slate-900 outline-none transition focus:border-blue-500 resize-y"
+                                                        className={`w-full rounded-xl border ${errors.items ? 'border-red-500' : 'border-slate-200'} bg-white px-3 py-2.5 text-slate-900 outline-none transition focus:border-blue-500 resize-y`}
                                                     />
-
                                                     {isOpen && (
                                                         <div className="absolute z-50 left-0 right-0 mt-1 overflow-auto rounded-xl border border-slate-200 bg-white shadow-lg" style={{ maxHeight: '200px', minWidth: '300px' }}>
                                                             <div className="sticky top-0 bg-white p-2 border-b border-slate-200">
@@ -737,7 +818,6 @@ export default function InvoiceForm({ onCancel, onInvoiceCreated }) {
                                                                                         };
                                                                                     });
 
-                                                                                    // Check if we need to add a new row
                                                                                     const updatedItem = updated.find((r) => r.id === item.id);
                                                                                     const isLast = updated[updated.length - 1]?.id === item.id;
 
@@ -770,7 +850,7 @@ export default function InvoiceForm({ onCancel, onInvoiceCreated }) {
                                                     )}
                                                 </div>
                                             </td>
-                                            <td className="py-3 pr-3">
+                                            <td className="py-2 pr-3">
                                                 <input
                                                     type="number"
                                                     min="1"
@@ -778,11 +858,12 @@ export default function InvoiceForm({ onCancel, onInvoiceCreated }) {
                                                     onChange={(event) => {
                                                         const value = event.target.value;
                                                         updateItem(item.id, 'qty', value);
+                                                        if (errors.items) setErrors({ ...errors, items: '' });
                                                     }}
-                                                    className="w-[76px] rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-center text-slate-900 outline-none transition focus:border-blue-500"
+                                                    className={`w-[76px] rounded-xl border ${errors.items === 0 ? 'border-red-500' : 'border-slate-200'} bg-white px-3 py-2.5 text-center text-slate-900 outline-none transition focus:border-blue-500`}
                                                 />
                                             </td>
-                                            <td className="py-3 pr-3">
+                                            <td className="py-2 pr-3">
                                                 <input
                                                     type="number"
                                                     min="0"
@@ -791,11 +872,12 @@ export default function InvoiceForm({ onCancel, onInvoiceCreated }) {
                                                     onChange={(event) => {
                                                         const value = event.target.value;
                                                         updateItem(item.id, 'rate', value);
+                                                        if (errors.items) setErrors({ ...errors, items: '' });
                                                     }}
-                                                    className="w-[108px] rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-slate-900 outline-none transition focus:border-blue-500"
+                                                    className={`w-[108px] rounded-xl border ${errors.items ? 'border-red-500' : 'border-slate-200'} bg-white px-3 py-2.5 text-slate-900 outline-none transition focus:border-blue-500`}
                                                 />
                                             </td>
-                                            <td className="py-3 pr-3">
+                                            <td className="py-2 pr-3">
                                                 <div className="relative w-[118px]">
                                                     <input
                                                         type="number"
@@ -812,7 +894,7 @@ export default function InvoiceForm({ onCancel, onInvoiceCreated }) {
                                                     <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs font-medium text-slate-500">%</span>
                                                 </div>
                                             </td>
-                                            <td className="py-3 pr-3">
+                                            <td className="py-2 pr-3">
                                                 <div className="flex w-[110px] items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-right font-semibold text-slate-800">
                                                     {amount.toFixed(2)}
                                                 </div>
