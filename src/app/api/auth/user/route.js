@@ -30,7 +30,7 @@ export async function GET(request) {
             return auth.error;
         }
 
-        const { userId } = auth;
+        const { userId, organizationId } = auth;
         const client = await db.connect();
 
         try {
@@ -60,14 +60,14 @@ export async function GET(request) {
             const user = userResult.rows[0];
 
             const orgQuery = `
-        SELECT id, name, gst_number 
-        FROM organizations 
-        WHERE user_id = $1 
-        LIMIT 1
+        SELECT id, name, gst_number
+        FROM organizations
+        WHERE user_id = $1
+        ORDER BY created_at ASC, id ASC
       `;
 
             const orgResult = await client.query(orgQuery, [userId]);
-            const organization = orgResult.rows[0];
+            const organization = orgResult.rows.find((org) => String(org.id) === String(organizationId)) || orgResult.rows[0];
 
             return NextResponse.json({
                 error: false,
@@ -104,7 +104,7 @@ export async function PUT(request) {
             return auth.error;
         }
 
-        const { userId } = auth;
+        const { userId, organizationId } = auth;
         const body = await request.json().catch(() => ({}));
 
         if (!body || typeof body !== 'object') {
@@ -189,8 +189,8 @@ export async function PUT(request) {
                 await client.query('BEGIN');
 
                 const existingOrg = await client.query(
-                    'SELECT id FROM organizations WHERE user_id = $1 LIMIT 1',
-                    [userId]
+                    'SELECT id FROM organizations WHERE user_id = $1 AND ($2::int IS NULL OR id = $2) ORDER BY created_at ASC, id ASC LIMIT 1',
+                    [userId, organizationId]
                 );
 
                 const finalOrgName = organizationNameForUpdate ?? existingOrg.rows[0]?.name ?? null;
@@ -198,8 +198,8 @@ export async function PUT(request) {
 
                 if (existingOrg.rows.length > 0) {
                     await client.query(
-                        'UPDATE organizations SET name = $1, gst_number = $2 WHERE user_id = $3',
-                        [finalOrgName, finalGstNumber, userId]
+                        'UPDATE organizations SET name = $1, gst_number = $2 WHERE id = $3 AND user_id = $4',
+                        [finalOrgName, finalGstNumber, existingOrg.rows[0].id, userId]
                     );
                 } else {
                     await client.query(
@@ -246,9 +246,9 @@ export async function PUT(request) {
             const userResult = await client.query(userQuery, [userId]);
             const user = userResult.rows[0];
 
-            const orgQuery = 'SELECT id, name, gst_number FROM organizations WHERE user_id = $1 LIMIT 1';
+            const orgQuery = 'SELECT id, name, gst_number FROM organizations WHERE user_id = $1 ORDER BY created_at ASC, id ASC';
             const orgResult = await client.query(orgQuery, [userId]);
-            const org = orgResult.rows[0];
+            const org = orgResult.rows.find((item) => String(item.id) === String(organizationId)) || orgResult.rows[0];
 
             return NextResponse.json({
                 error: false,
@@ -263,6 +263,7 @@ export async function PUT(request) {
                     organizationName: org?.name || user.company_name,
                     gstNumber: org?.gst_number || '',
                     organizationId: org?.id || null,
+                    organizations: orgResult.rows,
                 },
                 message: 'Profile updated successfully.'
             });

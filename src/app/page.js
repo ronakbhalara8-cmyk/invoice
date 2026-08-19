@@ -224,9 +224,17 @@ export default function Home() {
 
             if (loginResponse.status === 200) {
               const data = await loginResponse.json();
+              const organizations = data.data?.organizations || [];
+              sessionStorage.setItem('currentUser', JSON.stringify({
+                id: data.data?.userId,
+                email: payload.email,
+                organizationId: organizations.length === 1 ? organizations[0].id : null,
+                organizationName: organizations.length === 1 ? organizations[0].name : '',
+                organizations,
+              }));
               toast.success('Login successful!');
               setTimeout(() => {
-                router.push('/dashboard');
+                router.push(organizations.length > 1 ? '/organizations' : organizations.length === 1 ? '/dashboard' : '/organization?mode=create');
               }, 500);
               return;
             } else if (loginResponse.status === 404) {
@@ -357,9 +365,18 @@ export default function Home() {
       const data = await response.json();
 
       if (response.status === 200) {
+        const organizations = data.data?.organizations || [];
+        sessionStorage.setItem('currentUser', JSON.stringify({
+          id: data.data?.userId,
+          email: data.data?.email || loginEmail.trim(),
+          companyName: data.data?.companyName || '',
+          organizationId: organizations.length === 1 ? organizations[0].id : null,
+          organizationName: organizations.length === 1 ? organizations[0].name : '',
+          organizations,
+        }));
         toast.success('Login successful!');
         setTimeout(() => {
-          router.push('/dashboard');
+          router.push(organizations.length > 1 ? '/organizations' : organizations.length === 1 ? '/dashboard' : '/organization?mode=create');
         }, 500);
       } else {
         toast.error(data.message || 'Invalid email or password.');

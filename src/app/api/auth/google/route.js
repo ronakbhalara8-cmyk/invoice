@@ -51,17 +51,15 @@ export async function POST(request) {
         const payload = idToken ? decodeJwtPayload(idToken) : null;
         const email = payload?.email || body.email?.trim();
         const safeCompanyName = companyName?.trim();
-
         if (!email?.trim()) {
-            return new Response(
-                JSON.stringify({
-                    error: true,
-                    message: 'Email is required.',
-                }),
-                {
-                    status: 400,
-                    headers: { 'Content-Type': 'application/json' },
-                }
+            JSON.stringify({
+                error: true,
+                message: 'Email is required.',
+            }),
+            {
+                status: 400,
+                headers: { 'Content-Type': 'application/json' },
+            }
             );
         }
 
@@ -78,10 +76,11 @@ export async function POST(request) {
             if (existingUser.rows.length > 0) {
                 const userId = existingUser.rows[0].id;
 
-                // Fetch organization if exists
-                const orgQuery = 'SELECT id FROM organizations WHERE user_id = $1 LIMIT 1;';
+                // Fetch all organizations for post-login routing.
+                const orgQuery = 'SELECT id, name FROM organizations WHERE user_id = $1 ORDER BY created_at ASC, id ASC;';
                 const orgResult = await client.query(orgQuery, [userId]);
-                const organizationId = orgResult.rows[0]?.id || null;
+                const organizations = orgResult.rows;
+                const organizationId = organizations[0]?.id || null;
 
                 // Create JWT token
                 const token = createToken({
@@ -93,7 +92,7 @@ export async function POST(request) {
                 const response = NextResponse.json(
                     {
                         error: false,
-                        data: { userId, organizationId },
+                        data: { userId, organizationId, organizations },
                         message: 'Login successful. Redirecting to dashboard.',
                     },
                     { status: 200 }

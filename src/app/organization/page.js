@@ -7,6 +7,7 @@ import { toast } from 'react-toastify';
 function OrganizationPageContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
+    const isCreateMode = searchParams?.get('mode') === 'create';
     const [countries, setCountries] = useState([]);
     const [states, setStates] = useState([]);
     const [loading, setLoading] = useState({
@@ -65,9 +66,11 @@ function OrganizationPageContent() {
 
         try {
             const raw = sessionStorage.getItem('pendingRegistration');
-            if (!raw) {
+            if (!raw && !isCreateMode) {
                 throw new Error('Missing pending registration data');
             }
+
+            if (!raw && isCreateMode) return;
 
             const parsed = JSON.parse(raw);
             const hasIdentity = parsed && (parsed.email || parsed.companyName || parsed.name);
@@ -80,18 +83,29 @@ function OrganizationPageContent() {
             toast.error('Registration session expired. Please sign up again.');
             window.location.replace('/');
         }
-    }, []);
+    }, [isCreateMode]);
 
-    // Load pending registration
+    // Load the signed-up or logged-in user's display name from session storage.
     useEffect(() => {
         try {
             if (typeof window === 'undefined') return;
             const raw = sessionStorage.getItem('pendingRegistration');
-            if (!raw) return;
-            const parsed = JSON.parse(raw);
-            setPendingRegistration(parsed);
-            const nameToShow = parsed.name || parsed.companyName || parsed.email || '';
-            setWelcomeName(nameToShow);
+            const currentUserRaw = sessionStorage.getItem('currentUser');
+            const parsed = raw ? JSON.parse(raw) : null;
+            const currentUser = currentUserRaw ? JSON.parse(currentUserRaw) : null;
+
+            if (parsed && !isCreateMode) {
+                setPendingRegistration(parsed);
+            }
+
+            const identity = isCreateMode ? currentUser : parsed || currentUser;
+            const email = identity?.email || '';
+            const emailName = email.split('@')[0];
+            const rawName = identity?.name || identity?.fullName || identity?.companyName || emailName;
+            const nameToShow = String(rawName || '').split('@')[0];
+            setWelcomeName(nameToShow || 'there');
+
+            if (!parsed || isCreateMode) return;
 
             if (countries.length > 0) {
                 const matchedCountry = countries.find((country) => {
@@ -109,7 +123,7 @@ function OrganizationPageContent() {
         } catch (err) {
             console.error('Failed to load pending registration:', err);
         }
-    }, [countries]);
+    }, [countries, isCreateMode]);
 
     // Fetch states when country changes
     useEffect(() => {
@@ -275,6 +289,22 @@ function OrganizationPageContent() {
                 stateName: selectedState?.name || formData.state,
             };
 
+            if (isCreateMode) {
+                const response = await fetch('/api/organizations', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(submissionData),
+                });
+                const result = await response.json();
+                if (!response.ok || result?.error) {
+                    throw new Error(result?.message || 'Failed to create organization.');
+                }
+
+                toast.success('Organization created successfully.');
+                router.push('/organizations');
+                return;
+            }
+
             const registration = pendingRegistration || null;
             if (!registration) {
                 toast.error('Missing registration data. Please complete signup first.');
@@ -368,10 +398,10 @@ function OrganizationPageContent() {
                         {/* Welcome Message */}
                         <div className="mb-8">
                             <h1 className="text-2xl font-bold text-gray-900">
-                                Welcome aboard, {welcomeName ? welcomeName.split('@')[0] : 'there'}! 😊
+                                Welcome aboard, {welcomeName || 'there'}! 😊
                             </h1>
                             <p className="text-gray-600 mt-1">
-                                Enter your organization details to get started with Invoice.
+                                {isCreateMode ? 'Add another organization to your account.' : 'Enter your organization details to get started with Invoice.'}
                             </p>
                         </div>
 
@@ -630,7 +660,7 @@ function OrganizationPageContent() {
                                             Saving...
                                         </span>
                                     ) : (
-                                        'Get Started'
+                                        isCreateMode ? 'Create organization' : 'Get Started'
                                     )}
                                 </button>
                                 <button

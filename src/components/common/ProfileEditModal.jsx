@@ -1,7 +1,8 @@
 "use client";
 
-import { EyeClosed, EyeIcon, EyeOff } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { EyeClosed, EyeIcon, EyeOff, Settings } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
 
 const EMPTY_FORM = {
@@ -13,6 +14,7 @@ const EMPTY_FORM = {
 };
 
 export default function ProfileEditModal({ user, onClose, onUserUpdate }) {
+  const router = useRouter();
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -160,15 +162,27 @@ export default function ProfileEditModal({ user, onClose, onUserUpdate }) {
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
-            aria-label="Close"
-          >
-            <span>✕</span>
-            <span>Close</span>
-          </button>
+          <div className="flex items-center gap-6">
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                router.push('/organizations');
+              }}
+              className="font-sans cursor-pointer text-blue-600 hover:text-blue-700"
+            >
+              Manage <Settings className="inline-block h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+              aria-label="Close"
+            >
+              <span>✕</span>
+              <span>Close</span>
+            </button>
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-6 py-6">

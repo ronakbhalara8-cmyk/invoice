@@ -52,6 +52,7 @@ export default function DashboardLayout({ children }) {
               state: result.data.state || '',
               gstNumber: result.data.gstNumber || '',
               organizationId: result.data.organizationId,
+              organizations: result.data.organizations || [],
             };
             setUser(userData);
             // Cache in sessionStorage

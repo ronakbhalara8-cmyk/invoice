@@ -53,10 +53,11 @@ export async function POST(request) {
                 );
             }
 
-            // Fetch organization if exists
-            const orgQuery = 'SELECT id FROM organizations WHERE user_id = $1 LIMIT 1;';
+            // Fetch all organizations for post-login routing.
+            const orgQuery = 'SELECT id, name FROM organizations WHERE user_id = $1 ORDER BY created_at ASC, id ASC;';
             const orgResult = await client.query(orgQuery, [user.id]);
-            const organizationId = orgResult.rows[0]?.id || null;
+            const organizations = orgResult.rows;
+            const organizationId = organizations[0]?.id || null;
 
             // Create JWT token
             const token = createToken({
@@ -74,6 +75,7 @@ export async function POST(request) {
                         organizationId,
                         companyName: user.company_name,
                         email: user.email,
+                        organizations,
                     },
                     message: 'Login successful.',
                 },
