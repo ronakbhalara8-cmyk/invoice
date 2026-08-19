@@ -82,14 +82,13 @@ export default function Dashboard() {
 
                 const response = await fetch("/api/auth/user", { cache: "no-store" });
                 const result = await response.json();
-                const freshName = result?.data?.username || result?.data?.name || result?.data?.companyName || result?.data?.email?.split("@")[0];
+                const freshName = result?.data?.username || "N/A";
                 if (response.ok && freshName) {
-                    const displayName = String(freshName).trim().split(/\s+/)[0];
-                    setUserName(displayName);
+                    setUserName(freshName);
                     sessionStorage.setItem("currentUser", JSON.stringify({
                         ...storedUser,
                         username: result.data.username || storedUser?.username || "",
-                        name: result.data.name || result.data.companyName || storedUser?.name || displayName,
+                        name: result.data.name || result.data.companyName || storedUser?.name,
                     }));
                 }
             } catch (userError) {
