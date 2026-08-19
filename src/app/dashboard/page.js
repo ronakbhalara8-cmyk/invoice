@@ -83,8 +83,8 @@ export default function Dashboard() {
                 const response = await fetch("/api/auth/user", { cache: "no-store" });
                 const result = await response.json();
                 const freshName = result?.data?.username || "N/A";
+                setUserName(freshName);
                 if (response.ok && freshName) {
-                    setUserName(freshName);
                     sessionStorage.setItem("currentUser", JSON.stringify({
                         ...storedUser,
                         username: result.data.username || storedUser?.username || "",
