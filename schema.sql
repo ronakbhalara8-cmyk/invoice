@@ -55,6 +55,7 @@ CREATE INDEX IF NOT EXISTS idx_invoices_created_at
 CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
   company_name VARCHAR(255) NOT NULL,
+  username VARCHAR(255) NOT NULL,
   phone VARCHAR(50) NOT NULL,
   email VARCHAR(255) NOT NULL UNIQUE,
   password_hash TEXT NOT NULL,
@@ -63,6 +64,16 @@ CREATE TABLE IF NOT EXISTS users (
   state VARCHAR(100),
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE users
+  ADD COLUMN IF NOT EXISTS username VARCHAR(255);
+
+UPDATE users
+SET username = split_part(email, '@', 1)
+WHERE username IS NULL OR btrim(username) = '';
+
+ALTER TABLE users
+  ALTER COLUMN username SET NOT NULL;
 
 ALTER TABLE users
   ALTER COLUMN password_hash DROP NOT NULL;

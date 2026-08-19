@@ -101,7 +101,7 @@ function OrganizationPageContent() {
             const identity = isCreateMode ? currentUser : parsed || currentUser;
             const email = identity?.email || '';
             const emailName = email.split('@')[0];
-            const rawName = identity?.name || identity?.fullName || identity?.companyName || emailName;
+            const rawName = identity?.username || identity?.name || identity?.fullName || identity?.companyName || emailName;
             const nameToShow = String(rawName || '').split('@')[0];
             setWelcomeName(nameToShow || 'there');
 
@@ -340,6 +340,7 @@ function OrganizationPageContent() {
             const profile = {
                 name: formData.organizationName || pendingRegistration?.name || pendingRegistration?.companyName || pendingRegistration?.email || 'User',
                 email: pendingRegistration?.email || '',
+                username: pendingRegistration?.username || '',
                 organizationName: formData.organizationName || pendingRegistration?.companyName || pendingRegistration?.name || 'Organization',
                 company_name: formData.organizationName || pendingRegistration?.companyName || pendingRegistration?.name || 'Organization',
                 gstNumber: formData.gstNumber || '',

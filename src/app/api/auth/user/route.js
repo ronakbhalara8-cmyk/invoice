@@ -39,6 +39,7 @@ export async function GET(request) {
           id, 
           email, 
           company_name, 
+          username,
           phone, 
           country, 
           country_code, 
@@ -75,6 +76,7 @@ export async function GET(request) {
                     userId: user.id,
                     email: user.email,
                     companyName: user.company_name,
+                    username: user.username,
                     phone: user.phone,
                     country: user.country,
                     countryCode: user.country_code,
@@ -136,6 +138,14 @@ export async function PUT(request) {
                 return NextResponse.json({ error: true, message: 'Company name cannot be empty.' }, { status: 400 });
             }
             pushUpdate('company_name', companyName);
+        }
+
+        if ('username' in body) {
+            const username = normalizeOptionalText(body.username);
+            if (username === null) {
+                return NextResponse.json({ error: true, message: 'Username cannot be empty.' }, { status: 400 });
+            }
+            pushUpdate('username', username);
         }
 
         if ('phone' in body) {
@@ -235,6 +245,7 @@ export async function PUT(request) {
                   id,
                   email,
                   company_name,
+                  username,
                   phone,
                   country,
                   country_code,
@@ -256,6 +267,7 @@ export async function PUT(request) {
                     userId: user.id,
                     email: user.email,
                     companyName: user.company_name,
+                    username: user.username,
                     phone: user.phone,
                     country: user.country,
                     countryCode: user.country_code,

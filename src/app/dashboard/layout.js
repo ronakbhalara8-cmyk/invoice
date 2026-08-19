@@ -44,6 +44,7 @@ export default function DashboardLayout({ children }) {
               id: result.data.userId,
               email: result.data.email,
               name: result.data.companyName || result.data.email || 'User',
+              username: result.data.username || '',
               organizationName: result.data.organizationName || result.data.companyName || 'Organization',
               company_name: result.data.companyName,
               companyName: result.data.companyName,
@@ -64,6 +65,7 @@ export default function DashboardLayout({ children }) {
           if (pending) {
             const userData = {
               name: pending.companyName || pending.name || pending.email || 'User',
+              username: pending.username || '',
               email: pending.email || '',
               organizationName: pending.companyName || pending.name || 'Organization',
               company_name: pending.companyName || pending.name || 'Organization',
@@ -79,6 +81,7 @@ export default function DashboardLayout({ children }) {
           if (pending) {
             const userData = {
               name: pending.companyName || pending.name || pending.email || 'User',
+              username: pending.username || '',
               email: pending.email || '',
               organizationName: pending.companyName || pending.name || 'Organization',
               company_name: pending.companyName || pending.name || 'Organization',

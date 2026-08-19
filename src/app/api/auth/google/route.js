@@ -52,14 +52,15 @@ export async function POST(request) {
         const email = payload?.email || body.email?.trim();
         const safeCompanyName = companyName?.trim();
         if (!email?.trim()) {
-            JSON.stringify({
-                error: true,
-                message: 'Email is required.',
-            }),
-            {
-                status: 400,
-                headers: { 'Content-Type': 'application/json' },
-            }
+            return new Response(
+                JSON.stringify({
+                    error: true,
+                    message: 'Email is required.',
+                }),
+                {
+                    status: 400,
+                    headers: { 'Content-Type': 'application/json' },
+                }
             );
         }
 

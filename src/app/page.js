@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import {
   Building2,
+  UserRound,
   Phone,
   Mail,
   LockKeyhole,
@@ -34,6 +35,7 @@ export default function Home() {
 
   // Register form state
   const [companyName, setCompanyName] = useState("");
+  const [username, setUsername] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -370,6 +372,7 @@ export default function Home() {
           id: data.data?.userId,
           email: data.data?.email || loginEmail.trim(),
           companyName: data.data?.companyName || '',
+          username: data.data?.username || '',
           organizationId: organizations.length === 1 ? organizations[0].id : null,
           organizationName: organizations.length === 1 ? organizations[0].name : '',
           organizations,
@@ -400,6 +403,11 @@ export default function Home() {
       return;
     }
 
+    if (!username?.trim()) {
+      toast.error("Please enter a username.");
+      return;
+    }
+
     if (!agreeTerms) {
       toast.error("Please agree to the Terms of Service and Privacy Policy.");
       return;
@@ -408,6 +416,7 @@ export default function Home() {
     try {
       const pending = {
         companyName,
+        username,
         phone,
         email: googleProfile?.email || email,
         name: googleProfile?.name || null,
@@ -451,6 +460,11 @@ export default function Home() {
       return;
     }
 
+    if (!username?.trim()) {
+      toast.error("Please enter a username.");
+      return;
+    }
+
     if (!phone?.trim()) {
       toast.error("Please enter a phone number.");
       return;
@@ -468,6 +482,7 @@ export default function Home() {
 
     const formData = {
       companyName,
+      username,
       phone,
       email,
       password,
@@ -510,7 +525,7 @@ export default function Home() {
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
         style={{
           backgroundImage:
-            "url('https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=2400&q=90')",
+            "url('/background.avif')",
         }}
       />
 
@@ -712,6 +727,23 @@ export default function Home() {
                         />
                       </div>
                     )}
+
+                    <div className="relative">
+                      <UserRound
+                        size={18}
+                        strokeWidth={1.5}
+                        className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#a6adb7]"
+                      />
+                      <input
+                        type="text"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        placeholder="Username"
+                        autoComplete="username"
+                        className="h-[54px] w-full rounded-[7px] border border-[#dfe3e8] bg-white pl-11 pr-4 text-[15px] text-[#1f2937] outline-none transition placeholder:text-[#7c8490] focus:border-[#1677e8] focus:ring-2 focus:ring-[#1677e8]/10"
+                        required
+                      />
+                    </div>
 
                     <div className="relative">
                       <Mail

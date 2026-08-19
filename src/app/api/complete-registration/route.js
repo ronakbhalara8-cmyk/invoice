@@ -24,6 +24,7 @@ export async function POST(request) {
 
         const {
             companyName: regCompanyName,
+            username,
             phone,
             email,
             password,
@@ -36,9 +37,9 @@ export async function POST(request) {
 
         const companyName = (regCompanyName && regCompanyName.trim()) || (name && name.trim()) || (email && email.trim()) || null;
 
-        if (!email || !companyName) {
+        if (!email || !companyName || !username?.trim()) {
             return new Response(
-                JSON.stringify({ error: true, message: 'Missing required registration fields.' }),
+                JSON.stringify({ error: true, message: 'Username and other required registration fields are missing.' }),
                 { status: 400, headers: { 'Content-Type': 'application/json' } }
             );
         }
@@ -65,13 +66,14 @@ export async function POST(request) {
             }
 
             const insertUserQuery = `
-        INSERT INTO users (
-          company_name, phone, email, password_hash, country, country_code, state, created_at
-        ) VALUES ($1,$2,$3,$4,$5,$6,$7,NOW()) RETURNING id;
+                                INSERT INTO users (
+                    company_name, username, phone, email, password_hash, country, country_code, state, created_at
+                ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW()) RETURNING id;
       `;
 
             const userValues = [
                 companyName,
+                username?.trim() || null,
                 phone?.trim() || null,
                 email?.trim(),
                 passwordHash,

@@ -6,6 +6,7 @@ export async function POST(request) {
         const body = await request.json();
         const {
             companyName,
+            username,
             phone,
             email,
             password,
@@ -16,6 +17,7 @@ export async function POST(request) {
 
         if (
             !companyName?.trim() ||
+            !username?.trim() ||
             !phone?.trim() ||
             !email?.trim() ||
             !password ||
@@ -40,6 +42,7 @@ export async function POST(request) {
         const query = `
       INSERT INTO users (
         company_name,
+        username,
         phone,
         email,
         password_hash,
@@ -47,12 +50,13 @@ export async function POST(request) {
         country_code,
         state,
         created_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
       RETURNING id;
     `;
 
         const values = [
             companyName.trim(),
+            username.trim(),
             phone.trim(),
             email.trim(),
             passwordHash,

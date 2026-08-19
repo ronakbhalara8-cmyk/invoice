@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
 
 const EMPTY_FORM = {
+  username: '',
   companyName: '',
   organizationName: '',
   phone: '',
@@ -22,6 +23,7 @@ export default function ProfileEditModal({ user, onClose, onUserUpdate }) {
 
   useEffect(() => {
     const nextForm = {
+      username: user?.username || '',
       companyName: user?.companyName || user?.company_name || user?.organizationName || user?.name || '',
       organizationName: user?.organizationName || user?.companyName || user?.company_name || user?.name || '',
       phone: user?.phone || '',
@@ -57,6 +59,10 @@ export default function ProfileEditModal({ user, onClose, onUserUpdate }) {
 
   const validateForm = () => {
     const newErrors = {};
+
+    if (!formData.username.trim()) {
+      newErrors.username = 'Username is required';
+    }
 
     if (!formData.companyName.trim()) {
       newErrors.companyName = 'Company name is required';
@@ -100,6 +106,7 @@ export default function ProfileEditModal({ user, onClose, onUserUpdate }) {
       const trimmedPhone = (formData.phone || '').trim();
 
       const payload = {
+        username: formData.username.trim(),
         companyName: formData.companyName,
         organizationName: formData.organizationName,
         ...(trimmedPhone ? { phone: trimmedPhone } : {}),
@@ -122,6 +129,7 @@ export default function ProfileEditModal({ user, onClose, onUserUpdate }) {
         ...user,
         id: result.data.userId ?? user?.id,
         email: user?.email || '',
+        username: result.data.username || formData.username.trim(),
         name: result.data.companyName || formData.companyName,
         company_name: result.data.companyName || formData.companyName,
         companyName: result.data.companyName || formData.companyName,
@@ -188,6 +196,23 @@ export default function ProfileEditModal({ user, onClose, onUserUpdate }) {
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-6 py-6">
           <div className="space-y-5">
             <div className="grid gap-5 md:grid-cols-2">
+              <div className="md:col-span-2">
+                <label className="mb-1 block text-sm font-medium text-slate-700">
+                  Username <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.username}
+                  onChange={(event) => handleChange('username', event.target.value)}
+                  className={`w-full rounded-xl border ${errors.username ? 'border-red-500' : 'border-slate-200'} bg-slate-50 px-3 py-2.5 text-slate-800 outline-none transition focus:border-blue-500 focus:bg-white`}
+                  placeholder="Enter your username"
+                  autoComplete="username"
+                />
+                {errors.username && (
+                  <p className="mt-1 text-xs text-red-500">{errors.username}</p>
+                )}
+              </div>
+
               <div className="md:col-span-2">
                 <label className="mb-1 block text-sm font-medium text-slate-700">
                   Company name <span className="text-red-500">*</span>

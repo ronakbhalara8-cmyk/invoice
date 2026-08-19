@@ -1,10 +1,11 @@
 "use client";
 
-import {useEffect, useState} from 'react';
-import {FilePlus2, FileText} from 'lucide-react';
+import { Suspense, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { FilePlus2, FileText } from 'lucide-react';
 import InvoiceForm from '@/components/invoices/InvoiceForm';
 import InvoiceList from '@/components/invoices/InvoiceList';
-import {downloadInvoicePdf} from '@/components/invoices/InvoicePDF';
+import { downloadInvoicePdf } from '@/components/invoices/InvoicePDF';
 
 const parseJsonSafely = async (response) => {
     if (!response) return null;
@@ -20,7 +21,8 @@ const parseJsonSafely = async (response) => {
     }
 };
 
-export default function InvoicePage() {
+function InvoicePageContent() {
+    const searchParams = useSearchParams();
     const [showForm, setShowForm] = useState(false);
     const [invoices, setInvoices] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -47,6 +49,12 @@ export default function InvoicePage() {
     useEffect(() => {
         loadInvoices();
     }, []);
+
+    useEffect(() => {
+        if (searchParams.get('create') === 'true') {
+            setShowForm(true);
+        }
+    }, [searchParams]);
 
     const handleInvoiceCreated = (invoice) => {
         setInvoices((prev) => [invoice, ...prev]);
@@ -93,5 +101,13 @@ export default function InvoicePage() {
                 </>
             )}
         </div>
+    );
+}
+
+export default function InvoicePage() {
+    return (
+        <Suspense fallback={<div className="min-h-32" />}>
+            <InvoicePageContent />
+        </Suspense>
     );
 }

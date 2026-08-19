@@ -27,7 +27,7 @@ export async function POST(request) {
         try {
             // Find user by email
             const userQuery = `
-                SELECT id, company_name, email, password_hash, country, country_code, state, phone
+                SELECT id, company_name, username, email, password_hash, country, country_code, state, phone
                 FROM users 
                 WHERE LOWER(email) = LOWER($1) 
                 LIMIT 1;
@@ -65,6 +65,7 @@ export async function POST(request) {
                 organizationId,
                 email: user.email,
                 companyName: user.company_name,
+                username: user.username,
             });
 
             const response = NextResponse.json(
@@ -74,6 +75,7 @@ export async function POST(request) {
                         userId: user.id,
                         organizationId,
                         companyName: user.company_name,
+                        username: user.username,
                         email: user.email,
                         organizations,
                     },

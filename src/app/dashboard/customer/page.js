@@ -1,13 +1,15 @@
 "use client";
 
-import {useEffect, useState} from 'react';
-import {FilePlus2, FileText} from 'lucide-react';
+import { Suspense, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { FilePlus2, FileText } from 'lucide-react';
 import CustomersTable from '@/components/customers/CustomersTable';
 import CustomerModal from '@/components/customers/CustomerModal';
 import CustomerDetailSidebar from '@/components/customers/CustomerDetailSidebar';
 import DeleteConfirmModal from '@/components/customers/DeleteConfirmModal';
 
-export default function CustomerPage() {
+function CustomerPageContent() {
+  const searchParams = useSearchParams();
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -45,6 +47,12 @@ export default function CustomerPage() {
     setShowForm(true);
     setIsSidebarOpen(false);
   };
+
+  useEffect(() => {
+    if (searchParams.get('create') === 'true') {
+      openAddCustomer();
+    }
+  }, [searchParams]);
 
   const openEditCustomer = (customer) => {
     setModalMode('edit');
@@ -127,5 +135,13 @@ export default function CustomerPage() {
         </>
       )}
     </div>
+  );
+}
+
+export default function CustomerPage() {
+  return (
+    <Suspense fallback={<div className="min-h-32" />}>
+      <CustomerPageContent />
+    </Suspense>
   );
 }
