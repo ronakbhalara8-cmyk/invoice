@@ -301,7 +301,7 @@ function OrganizationPageContent() {
                 }
 
                 toast.success('Organization created successfully.');
-                router.push('/organizations');
+                router.push('/organizationlist');
                 return;
             }
 

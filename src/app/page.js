@@ -236,7 +236,7 @@ export default function Home() {
               }));
               toast.success('Login successful!');
               setTimeout(() => {
-                router.push(organizations.length > 1 ? '/organizations' : organizations.length === 1 ? '/dashboard' : '/organization?mode=create');
+                router.push(organizations.length > 1 ? '/organizationlist' : organizations.length === 1 ? '/dashboard' : '/organization?mode=create');
               }, 500);
               return;
             } else if (loginResponse.status === 404) {
@@ -379,7 +379,7 @@ export default function Home() {
         }));
         toast.success('Login successful!');
         setTimeout(() => {
-          router.push(organizations.length > 1 ? '/organizations' : organizations.length === 1 ? '/dashboard' : '/organization?mode=create');
+          router.push(organizations.length > 1 ? '/organizationlist' : organizations.length === 1 ? '/dashboard' : '/organization?mode=create');
         }, 500);
       } else {
         toast.error(data.message || 'Invalid email or password.');

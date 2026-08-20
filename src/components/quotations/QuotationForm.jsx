@@ -26,6 +26,8 @@ const amountFor = (item) =>
 
 const numberValue = (value) => Number(value || 0);
 
+const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value).trim());
+
 const isItemComplete = (item) =>
     Boolean(item.name?.trim()) && numberValue(item.qty) > 0 && numberValue(item.rate) > 0;
 
@@ -50,6 +52,7 @@ export default function QuotationForm({ quotation, onCancel, onSaved }) {
     const [gstRate, setGstRate] = useState(18);
     const [terms, setTerms] = useState('This quotation is valid for 15 days.');
     const [saving, setSaving] = useState(false);
+    const [errors, setErrors] = useState({});
     const [openProductId, setOpenProductId] = useState(null);
     const [productSearch, setProductSearch] = useState('');
     const [isCustomerDropdownOpen, setIsCustomerDropdownOpen] = useState(false);
@@ -258,12 +261,31 @@ export default function QuotationForm({ quotation, onCancel, onSaved }) {
     const submit = async (event) => {
         event.preventDefault();
         const validItems = items.filter((item) => item.name.trim());
-        if (
-            !customer.customer_name.trim() ||
-            !validItems.length ||
-            validItems.some((item) => numberValue(item.qty) <= 0 || numberValue(item.rate) <= 0)
-        ) {
-            toast.error('Customer name and valid product rows are required.');
+        const nextErrors = {};
+
+        if (!company.company_name?.trim()) nextErrors.companyName = 'Company name is required.';
+        if (!company.company_address?.trim()) nextErrors.companyAddress = 'Company address is required.';
+        if (!customer.customer_name?.trim()) nextErrors.customerName = 'Customer name is required.';
+        if (customer.email?.trim() && !isValidEmail(customer.email)) {
+            nextErrors.customerEmail = 'Enter a valid email address.';
+        }
+        if (!validItems.length) nextErrors.items = 'Add at least one product.';
+
+        items.forEach((item) => {
+            const isEmptyAutoRow = !item.name?.trim() && numberValue(item.qty) === 1 && numberValue(item.rate) === 0;
+            if (isEmptyAutoRow) return;
+            if (!item.name?.trim()) nextErrors[`itemName_${item.id}`] = 'Product name is required.';
+            if (item.name?.trim() && numberValue(item.qty) <= 0) {
+                nextErrors[`itemQty_${item.id}`] = 'Qty must be greater than 0.';
+            }
+            if (item.name?.trim() && numberValue(item.rate) <= 0) {
+                nextErrors[`itemRate_${item.id}`] = 'Rate must be greater than 0.';
+            }
+        });
+
+        setErrors(nextErrors);
+        if (Object.keys(nextErrors).length > 0) {
+            toast.error('Please fix the required fields.');
             return;
         }
         try {
@@ -329,11 +351,11 @@ export default function QuotationForm({ quotation, onCancel, onSaved }) {
                 </button>
             </div>
 
-            <form onSubmit={submit} className="space-y-8">
+            <form noValidate onSubmit={submit} className="space-y-8">
                 {/* Quotation Details */}
                 <section className="grid gap-4 md:grid-cols-3">
                     <div className="md:col-span-3">
-                        <h3 className="text-sm font-semibold uppercase tracking-[0.1em] text-slate-500">
+                        <h3 className="text-sm font-semibold uppercase tracking-widest text-slate-500">
                             Quotation details
                         </h3>
                     </div>
@@ -342,14 +364,17 @@ export default function QuotationForm({ quotation, onCancel, onSaved }) {
                         ref={(element) => (dropdownRefs.current.customer = element)}
                     >
                         <label htmlFor="quotation-customer-search">Select customer or type manually</label>
-                        <input
-                            id="quotation-customer-search"
-                            value={customer.customer_name}
-                            onFocus={() => setIsCustomerDropdownOpen(true)}
-                            onChange={(event) => updateCustomerName(event.target.value)}
-                            className="w-full rounded-xl mt-[3px] border border-slate-200 bg-slate-50 px-3 py-2.5 font-normal outline-none focus:border-blue-500 focus:bg-white"
-                            placeholder="Search customer or type a name"
-                        />
+                        <div>
+                            <input
+                                id="quotation-customer-search"
+                                value={customer.customer_name}
+                                onFocus={() => setIsCustomerDropdownOpen(true)}
+                                onChange={(event) => updateCustomerName(event.target.value)}
+                                className="w-full rounded-xl mt-0.75 border border-slate-200 bg-slate-50 px-3 py-2.5 font-normal outline-none focus:border-blue-500 focus:bg-white"
+                                placeholder="Search customer or type a name"
+                            />
+                            {errors.customerName && <p className="text-xs pt-1 font-medium text-red-500">{errors.customerName}</p>}
+                        </div>
                         {isCustomerDropdownOpen && (
                             <div className="absolute left-0 right-0 top-full z-100 mt-1 max-h-56 min-w-72 overflow-auto rounded-xl border border-slate-200 bg-white py-1 shadow-2xl">
                                 {filteredCustomers.length ? (
@@ -378,13 +403,16 @@ export default function QuotationForm({ quotation, onCancel, onSaved }) {
                     </div>
                     <label className="space-y-2 text-sm font-medium text-slate-700">
                         Company name
-                        <input
-                            value={company.company_name || ''}
-                            onChange={(event) => setCompany({ ...company, company_name: event.target.value })}
-                            className="w-full mt-[3px] rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 font-normal outline-none focus:border-blue-500"
-                            placeholder="Your company"
-                            required
-                        />
+                        <div>
+                            <input
+                                value={company.company_name || ''}
+                                onChange={(event) => setCompany({ ...company, company_name: event.target.value })}
+                                className="w-full mt-0.75 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 font-normal outline-none focus:border-blue-500"
+                                placeholder="Your company"
+                                required
+                            />
+                            {errors.companyName && <p className="text-xs pt-1 font-medium text-red-500">{errors.companyName}</p>}
+                        </div>
                     </label>
                     <label className="space-y-2 text-sm font-medium text-slate-700">
                         Currency
@@ -393,20 +421,23 @@ export default function QuotationForm({ quotation, onCancel, onSaved }) {
                             onChange={(event) =>
                                 setCompany({ ...company, currency: event.target.value.toUpperCase() })
                             }
-                            className="w-full mt-[3px] rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 font-normal outline-none focus:border-blue-500"
+                            className="w-full mt-0.75 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 font-normal outline-none focus:border-blue-500"
                             maxLength={3}
                         />
                     </label>
                     <label className="space-y-2 text-sm font-medium text-slate-700 md:col-span-2">
                         Company address
-                        <input
-                            value={company.company_address || ''}
-                            onChange={(event) =>
-                                setCompany({ ...company, company_address: event.target.value })
-                            }
-                            className="w-full mt-[3px] rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 font-normal outline-none focus:border-blue-500"
-                            placeholder="Company address"
-                        />
+                        <div>
+                            <input
+                                value={company.company_address || ''}
+                                onChange={(event) =>
+                                    setCompany({ ...company, company_address: event.target.value })
+                                }
+                                className="w-full mt-0.75 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 font-normal outline-none focus:border-blue-500"
+                                placeholder="Company address"
+                            />
+                            {errors.companyAddress && <p className="text-xs pt-1 font-medium text-red-500">{errors.companyAddress}</p>}
+                        </div>
                     </label>
                     <label className="space-y-2 text-sm font-medium text-slate-700">
                         GST number
@@ -415,7 +446,7 @@ export default function QuotationForm({ quotation, onCancel, onSaved }) {
                             onChange={(event) =>
                                 setCompany({ ...company, company_gst_number: event.target.value })
                             }
-                            className="w-full mt-[3px] rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 font-normal outline-none focus:border-blue-500"
+                            className="w-full mt-0.75 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 font-normal outline-none focus:border-blue-500"
                             placeholder="Optional"
                         />
                     </label>
@@ -423,7 +454,7 @@ export default function QuotationForm({ quotation, onCancel, onSaved }) {
 
                 {/* Customer */}
                 <section className="space-y-4">
-                    <h3 className="text-sm font-semibold uppercase tracking-[0.1em] text-slate-500">
+                    <h3 className="text-sm font-semibold uppercase tracking-widest text-slate-500">
                         Customer
                     </h3>
                     <div className="grid gap-4 md:grid-cols-2">
@@ -432,7 +463,7 @@ export default function QuotationForm({ quotation, onCancel, onSaved }) {
                             <input
                                 value={customer.customer_name}
                                 onChange={(event) => updateCustomerName(event.target.value)}
-                                className="w-full mt-[3px] rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 font-normal outline-none focus:border-blue-500"
+                                className="w-full mt-0.75 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 font-normal outline-none focus:border-blue-500"
                                 placeholder="Enter customer name"
                                 required
                             />
@@ -444,7 +475,7 @@ export default function QuotationForm({ quotation, onCancel, onSaved }) {
                                 onChange={(event) =>
                                     setCustomer({ ...customer, company_name: event.target.value })
                                 }
-                                className="w-full mt-[3px] rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 font-normal outline-none focus:border-blue-500"
+                                className="w-full mt-0.75 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 font-normal outline-none focus:border-blue-500"
                                 placeholder="Optional"
                             />
                         </label>
@@ -454,7 +485,7 @@ export default function QuotationForm({ quotation, onCancel, onSaved }) {
                                 type="email"
                                 value={customer.email}
                                 onChange={(event) => setCustomer({ ...customer, email: event.target.value })}
-                                className="w-full mt-[3px] rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 font-normal outline-none focus:border-blue-500"
+                                className="w-full mt-0.75 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 font-normal outline-none focus:border-blue-500"
                                 placeholder="Optional"
                             />
                         </label>
@@ -463,7 +494,7 @@ export default function QuotationForm({ quotation, onCancel, onSaved }) {
                             <input
                                 value={customer.phone}
                                 onChange={(event) => setCustomer({ ...customer, phone: event.target.value })}
-                                className="w-full mt-[3px] rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 font-normal outline-none focus:border-blue-500"
+                                className="w-full mt-0.75 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 font-normal outline-none focus:border-blue-500"
                                 placeholder="Optional"
                             />
                         </label>
@@ -472,7 +503,7 @@ export default function QuotationForm({ quotation, onCancel, onSaved }) {
                             <input
                                 value={customer.address}
                                 onChange={(event) => setCustomer({ ...customer, address: event.target.value })}
-                                className="w-full mt-[3px] rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 font-normal outline-none focus:border-blue-500"
+                                className="w-full mt-0.75 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 font-normal outline-none focus:border-blue-500"
                                 placeholder="Optional"
                             />
                         </label>
@@ -525,9 +556,10 @@ export default function QuotationForm({ quotation, onCancel, onSaved }) {
                                                     setOpenProductId(item.id);
                                                     setProductSearch(event.target.value);
                                                 }}
-                                                className="min-w-64 w-full resize-y rounded-xl border border-slate-200 px-3 py-2 outline-none focus:border-blue-500"
+                                                className={`min-w-64 w-full resize-y rounded-xl border ${errors[`itemName_${item.id}`] ? 'border-red-500' : 'border-slate-200'} px-3 py-2 outline-none focus:border-blue-500`}
                                                 placeholder="Click to select or type product manually..."
                                             />
+                                            {errors[`itemName_${item.id}`] && <p className="mt-1 text-xs font-medium text-red-500">{errors[`itemName_${item.id}`]}</p>}
                                             {openProductId === item.id && (
                                                 <div className="absolute left-3 right-3 top-full z-100 mt-1 max-h-56 min-w-72 overflow-auto rounded-xl border border-slate-200 bg-white shadow-2xl">
                                                     <div className="sticky top-0 border-b border-slate-200 bg-white p-2">
@@ -571,8 +603,9 @@ export default function QuotationForm({ quotation, onCancel, onSaved }) {
                                                 min="1"
                                                 value={item.qty}
                                                 onChange={(event) => updateItem(item.id, 'qty', event.target.value)}
-                                                className="w-20 rounded-lg border border-slate-200 px-2 py-2 outline-none"
+                                                className={`w-20 rounded-lg border ${errors[`itemQty_${item.id}`] ? 'border-red-500' : 'border-slate-200'} px-2 py-2 outline-none`}
                                             />
+                                            {errors[`itemQty_${item.id}`] && <p className="mt-1 text-xs font-medium text-red-500">{errors[`itemQty_${item.id}`]}</p>}
                                         </td>
                                         <td className="px-3 py-3">
                                             <input
@@ -581,8 +614,9 @@ export default function QuotationForm({ quotation, onCancel, onSaved }) {
                                                 step="0.01"
                                                 value={item.rate}
                                                 onChange={(event) => updateItem(item.id, 'rate', event.target.value)}
-                                                className="w-28 rounded-lg border border-slate-200 px-2 py-2 outline-none"
+                                                className={`w-28 rounded-lg border ${errors[`itemRate_${item.id}`] ? 'border-red-500' : 'border-slate-200'} px-2 py-2 outline-none`}
                                             />
+                                            {errors[`itemRate_${item.id}`] && <p className="mt-1 text-xs font-medium text-red-500">{errors[`itemRate_${item.id}`]}</p>}
                                         </td>
                                         <td className="px-3 py-3">
                                             <input
@@ -614,6 +648,7 @@ export default function QuotationForm({ quotation, onCancel, onSaved }) {
                                 ))}
                             </tbody>
                         </table>
+                        {errors.items && <p className="px-4 pb-3 text-sm font-medium text-red-500">{errors.items}</p>}
                     </div>
                 </section>
 
@@ -624,7 +659,7 @@ export default function QuotationForm({ quotation, onCancel, onSaved }) {
                         <textarea
                             value={terms}
                             onChange={(event) => setTerms(event.target.value)}
-                            className="min-h-32 w-full mt-[3px] rounded-xl border border-slate-200 px-3 py-2.5 font-normal outline-none focus:border-blue-500"
+                            className="min-h-32 w-full mt-0.75 rounded-xl border border-slate-200 px-3 py-2.5 font-normal outline-none focus:border-blue-500"
                         />
                     </label>
                     <div className="rounded-2xl bg-slate-50 p-5 text-sm">

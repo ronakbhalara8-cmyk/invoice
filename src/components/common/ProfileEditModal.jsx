@@ -175,7 +175,7 @@ export default function ProfileEditModal({ user, onClose, onUserUpdate }) {
               type="button"
               onClick={() => {
                 onClose();
-                router.push('/organizations');
+                router.push('/organizationlist');
               }}
               className="font-sans cursor-pointer text-blue-600 hover:text-blue-700"
             >
