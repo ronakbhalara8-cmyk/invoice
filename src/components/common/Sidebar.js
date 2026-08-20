@@ -8,6 +8,7 @@ import {
   FileText,
   DollarSign,
   AlertTriangle,
+  BarChart3,
   LogOut,
   ChevronLeft,
   X,
@@ -46,8 +47,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggle }) {
     { name: 'Items', href: '/dashboard/item', icon: Package },
     { name: 'Customers', href: '/dashboard/customer', icon: Users },
     { name: 'Invoice', href: '/dashboard/invoice', icon: FileText },
-    { name: 'Selling', href: '/dashboard/selling', icon: DollarSign },
-    { name: 'Out of Stock', href: '/dashboard/out-of-stock', icon: AlertTriangle },
+    { name: 'Reports', href: '/dashboard/report', icon: BarChart3 },
   ];
 
   return (

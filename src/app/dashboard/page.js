@@ -34,6 +34,11 @@ const parseResponse = async (response) => {
 const formatCurrency = (value, currency = "INR") =>
     new Intl.NumberFormat("en-IN", { style: "currency", currency, maximumFractionDigits: 0 }).format(Number(value) || 0);
 
+const formatNumber = (value) =>
+    new Intl.NumberFormat("en-IN", {
+        maximumFractionDigits: 0,
+    }).format(Number(value) || 0);
+
 const formatDate = (value) => {
     if (!value) return "No date";
     return new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value));
@@ -89,7 +94,7 @@ export default function Dashboard() {
         const revenue = data.invoices.reduce((total, invoice) => total + Number(invoice.grand_total || 0), 0);
         const lowStock = data.items.filter((item) => String(item.status).toLowerCase() !== "active").length;
         return [
-            { label: "Total revenue", value: formatCurrency(revenue), detail: `${data.invoices.length} invoices raised`, icon: CircleDollarSign, color: "text-emerald-700", bg: "bg-emerald-50" },
+            { label: "Total revenue", value: formatNumber(revenue), detail: `${data.invoices.length} invoices raised`, icon: CircleDollarSign, color: "text-emerald-700", bg: "bg-emerald-50" },
             { label: "Invoices created", value: data.invoices.length, detail: "All-time invoice count", icon: FileText, color: "text-blue-700", bg: "bg-blue-50" },
             { label: "Customers", value: data.customers.length, detail: "People in your network", icon: Users, color: "text-sky-700", bg: "bg-sky-50" },
             { label: "Stock alerts", value: lowStock, detail: lowStock ? "Needs your attention" : "Everything looks healthy", icon: Package, color: "text-indigo-700", bg: "bg-indigo-50" },
@@ -168,7 +173,6 @@ export default function Dashboard() {
                                 <p className="mt-1 text-3xl font-bold tracking-tight text-slate-900">
                                     {loading ? "--" : value}</p>
                             </div>
-                            <ArrowUpRight className="h-4 w-4 text-blue-300" />
                         </div>
                         <p className="mt-2 text-xs text-slate-400">{detail}</p>
                     </article>
