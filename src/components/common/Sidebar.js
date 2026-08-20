@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   Package,
   FileText,
+  FileCheck2,
   DollarSign,
   AlertTriangle,
   BarChart3,
@@ -47,6 +48,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggle }) {
     { name: 'Items', href: '/dashboard/item', icon: Package },
     { name: 'Customers', href: '/dashboard/customer', icon: Users },
     { name: 'Invoice', href: '/dashboard/invoice', icon: FileText },
+    { name: 'Quotation', href: '/dashboard/quotation', icon: FileCheck2 },
     { name: 'Reports', href: '/dashboard/report', icon: BarChart3 },
   ];
 

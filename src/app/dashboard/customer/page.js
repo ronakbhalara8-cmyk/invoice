@@ -6,7 +6,7 @@ import { FilePlus2, FileText } from 'lucide-react';
 import CustomersTable from '@/components/customers/CustomersTable';
 import CustomerModal from '@/components/customers/CustomerModal';
 import CustomerDetailSidebar from '@/components/customers/CustomerDetailSidebar';
-import DeleteConfirmModal from '@/components/customers/DeleteConfirmModal';
+import DeleteConfirmModal from '@/components/common/DeleteConfirmModal';
 
 function CustomerPageContent() {
   const searchParams = useSearchParams();
@@ -129,8 +129,11 @@ function CustomerPageContent() {
               setIsDeleteModalOpen(false);
               setSelectedCustomer(null);
             }}
-            customer={selectedCustomer}
-            onCustomerDeleted={handleDeleteCustomer}
+            item={selectedCustomer}
+            apiPath={selectedCustomer ? `/api/customers/${selectedCustomer.id}` : ''}
+            resourceLabel="customer"
+            resourceName={selectedCustomer?.company_name || selectedCustomer?.customer_name || selectedCustomer?.first_name}
+            onDeleted={handleDeleteCustomer}
           />
         </>
       )}

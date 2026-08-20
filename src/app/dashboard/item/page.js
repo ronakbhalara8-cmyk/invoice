@@ -4,20 +4,20 @@ import { useState, useEffect } from "react";
 import ItemsTable from "@/components/items/ItemsTable";
 import ItemModal from "@/components/items/ItemModal";
 import ItemDetailSidebar from "@/components/items/ItemDetailSidebar";
-import DeleteConfirmModal from "@/components/items/DeleteConfirmModal";
+import DeleteConfirmModal from "@/components/common/DeleteConfirmModal";
 import { toast } from "react-toastify";
 
 export default function ItemsPage() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedItem, setSelectedItem] = useState(null);
-  
+
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState('add');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  
+
   // ✅ Track if modal was opened from table (not from sidebar)
   const [isFromTable, setIsFromTable] = useState(false);
 
@@ -50,7 +50,7 @@ export default function ItemsPage() {
   };
 
   const handleUpdateItem = (updatedItem) => {
-    setItems(prev => prev.map(item => 
+    setItems(prev => prev.map(item =>
       item.id === updatedItem.id ? updatedItem : item
     ));
     // ✅ Update selected item if sidebar is open
@@ -142,7 +142,7 @@ export default function ItemsPage() {
 
   return (
     <>
-      <ItemsTable 
+      <ItemsTable
         items={items}
         loading={loading}
         onAddClick={openAddModal}
@@ -151,7 +151,7 @@ export default function ItemsPage() {
         onItemClick={openSidebar}
       />
 
-      <ItemModal 
+      <ItemModal
         isOpen={isModalOpen}
         onClose={handleModalClose}
         item={selectedItem}
@@ -160,18 +160,20 @@ export default function ItemsPage() {
         onItemUpdated={handleUpdateItem}
       />
 
-      <ItemDetailSidebar 
+      <ItemDetailSidebar
         isOpen={isSidebarOpen}
         onClose={closeSidebar}
         item={selectedItem}
         onEdit={(item) => openEditModal(item, false)} // ✅ fromTable = false (from sidebar)
       />
 
-      <DeleteConfirmModal 
+      <DeleteConfirmModal
         isOpen={isDeleteModalOpen}
         onClose={handleDeleteModalClose}
         item={selectedItem}
-        onItemDeleted={handleDeleteItem}
+        apiPath={selectedItem ? `/api/items/${selectedItem.id}` : ''}
+        resourceLabel="item"
+        onDeleted={handleDeleteItem}
       />
     </>
   );

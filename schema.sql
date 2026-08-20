@@ -51,6 +51,34 @@ CREATE INDEX IF NOT EXISTS idx_invoices_organization_id
 CREATE INDEX IF NOT EXISTS idx_invoices_created_at
   ON invoices (created_at DESC);
 
+-- Quotations keep a customer/company snapshot so old quotations remain accurate
+-- even if the customer or organization profile changes later.
+CREATE TABLE IF NOT EXISTS quotations (
+  id SERIAL PRIMARY KEY,
+  organization_id INTEGER NOT NULL,
+  quotation_number VARCHAR(100) NOT NULL,
+  customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL,
+  customer_name VARCHAR(255) NOT NULL,
+  customer_info JSONB DEFAULT '{}'::jsonb,
+  company_info JSONB DEFAULT '{}'::jsonb,
+  items JSONB NOT NULL DEFAULT '[]'::jsonb,
+  subtotal NUMERIC(12,2) NOT NULL DEFAULT 0,
+  discount_amount NUMERIC(12,2) NOT NULL DEFAULT 0,
+  gst_rate NUMERIC(5,2) NOT NULL DEFAULT 0,
+  tax_amount NUMERIC(12,2) NOT NULL DEFAULT 0,
+  grand_total NUMERIC(12,2) NOT NULL DEFAULT 0,
+  terms TEXT DEFAULT '',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  CONSTRAINT quotations_organization_number_unique UNIQUE (organization_id, quotation_number)
+);
+
+CREATE INDEX IF NOT EXISTS idx_quotations_organization_id
+  ON quotations (organization_id);
+
+CREATE INDEX IF NOT EXISTS idx_quotations_created_at
+  ON quotations (created_at DESC);
+
 
 CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
