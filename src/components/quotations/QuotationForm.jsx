@@ -260,68 +260,111 @@ export default function QuotationForm({ quotation, onCancel, onSaved }) {
 
     const submit = async (event) => {
         event.preventDefault();
-        const validItems = items.filter((item) => item.name.trim());
-        const nextErrors = {};
 
-        if (!company.company_name?.trim()) nextErrors.companyName = 'Company name is required.';
-        if (!company.company_address?.trim()) nextErrors.companyAddress = 'Company address is required.';
-        if (!customer.customer_name?.trim()) nextErrors.customerName = 'Customer name is required.';
-        if (customer.email?.trim() && !isValidEmail(customer.email)) {
-            nextErrors.customerEmail = 'Enter a valid email address.';
-        }
-        if (!validItems.length) nextErrors.items = 'Add at least one product.';
+        // Helper function to show single error with toast
+        const showFieldError = (field, message) => {
+            setErrors({ [field]: message });
+            toast.error(message);
+            return false;
+        };
 
-        items.forEach((item) => {
-            const isEmptyAutoRow = !item.name?.trim() && numberValue(item.qty) === 1 && numberValue(item.rate) === 0;
-            if (isEmptyAutoRow) return;
-            if (!item.name?.trim()) nextErrors[`itemName_${item.id}`] = 'Product name is required.';
-            if (item.name?.trim() && numberValue(item.qty) <= 0) {
-                nextErrors[`itemQty_${item.id}`] = 'Qty must be greater than 0.';
-            }
-            if (item.name?.trim() && numberValue(item.rate) <= 0) {
-                nextErrors[`itemRate_${item.id}`] = 'Rate must be greater than 0.';
-            }
-        });
-
-        setErrors(nextErrors);
-        if (Object.keys(nextErrors).length > 0) {
-            toast.error('Please fix the required fields.');
-            return;
-        }
         try {
-            setSaving(true);
-            const payload = {
-                customerId: customerId || null,
-                customerName: customer.customer_name.trim(),
-                customerInfo: customer,
-                companyInfo: company,
-                currency: company.currency || 'INR',
-                items: validItems.map(({ id, ...item }) => ({
-                    ...item,
-                    qty: numberValue(item.qty),
-                    rate: numberValue(item.rate),
-                    discount: numberValue(item.discount),
-                })),
-                gstRate: numberValue(gstRate),
-                terms,
-            };
-            const response = await fetch(
-                quotation ? `/api/quotations/${quotation.id}` : '/api/quotations',
-                {
-                    method: quotation ? 'PUT' : 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload),
+            // 1. Check customer name
+            if (!customer.customer_name?.trim()) {
+                return showFieldError('customerName', 'Customer name is required.');
+            }
+
+            // 2. Check company name
+            if (!company.company_name?.trim()) {
+                return showFieldError('companyName', 'Company name is required.');
+            }
+
+
+            // 3. Check company address
+            if (!company.company_address?.trim()) {
+                return showFieldError('companyAddress', 'Company address is required.');
+            }
+
+
+            // 4. Check customer email (if provided)
+            if (customer.email?.trim() && !isValidEmail(customer.email)) {
+                return showFieldError('customerEmail', 'Enter a valid email address.');
+            }
+
+            // 5. Check items (at least one product)
+            const validItems = items.filter((item) => item.name.trim());
+            if (!validItems.length) {
+                return showFieldError('items', 'Add at least one product.');
+            }
+
+            // 6. Check each item - one by one
+            for (const item of items) {
+                const isEmptyAutoRow = !item.name?.trim() && numberValue(item.qty) === 1 && numberValue(item.rate) === 0;
+                if (isEmptyAutoRow) continue;
+
+                if (!item.name?.trim()) {
+                    return showFieldError(`itemName_${item.id}`, `Product name is required for item #${items.indexOf(item) + 1}.`);
                 }
-            );
-            const result = await response.json();
-            if (!response.ok || !result?.success) throw new Error(result?.message || 'Unable to save quotation');
-            toast.success(quotation ? 'Quotation updated successfully.' : 'Quotation created successfully.');
-            onSaved(result.data);
+
+                if (item.name?.trim() && numberValue(item.qty) <= 0) {
+                    return showFieldError(`itemQty_${item.id}`, `Qty must be greater than 0 for "${item.name}".`);
+                }
+
+                if (item.name?.trim() && numberValue(item.rate) <= 0) {
+                    return showFieldError(`itemRate_${item.id}`, `Rate must be greater than 0 for "${item.name}".`);
+                }
+            }
+
+            // Clear any previous errors if all validation passes
+            setErrors({});
+
+            // Save the quotation
+            try {
+                setSaving(true);
+                const payload = {
+                    customerId: customerId || null,
+                    customerName: customer.customer_name.trim(),
+                    customerInfo: customer,
+                    companyInfo: company,
+                    currency: company.currency || 'INR',
+                    items: validItems.map(({ id, ...item }) => ({
+                        ...item,
+                        qty: numberValue(item.qty),
+                        rate: numberValue(item.rate),
+                        discount: numberValue(item.discount),
+                    })),
+                    gstRate: numberValue(gstRate),
+                    terms,
+                };
+
+                const response = await fetch(
+                    quotation ? `/api/quotations/${quotation.id}` : '/api/quotations',
+                    {
+                        method: quotation ? 'PUT' : 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload),
+                    }
+                );
+
+                const result = await response.json();
+                if (!response.ok || !result?.success) {
+                    throw new Error(result?.message || 'Unable to save quotation');
+                }
+
+                toast.success(quotation ? 'Quotation updated successfully.' : 'Quotation created successfully.');
+                onSaved(result.data);
+
+            } catch (error) {
+                console.error('Save quotation error:', error);
+                toast.error(error.message || 'Failed to save quotation.');
+            } finally {
+                setSaving(false);
+            }
+
         } catch (error) {
-            console.error('Save quotation error:', error);
-            toast.error(error.message || 'Failed to save quotation.');
-        } finally {
-            setSaving(false);
+            // Handle any unexpected errors
+            console.error('Validation error:', error);
+            toast.error('An unexpected error occurred during validation.');
         }
     };
 
