@@ -152,7 +152,7 @@ export default function ProfileEditModal({ user, onClose, onUserUpdate }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-slate-900/25 backdrop-blur-[1px]"
+      className="fixed inset-0 z-50 font-sans bg-slate-900/25 backdrop-blur-[1px]"
       onClick={onClose}
     >
       <div

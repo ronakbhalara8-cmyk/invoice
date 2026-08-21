@@ -369,7 +369,7 @@ function OrganizationPageContent() {
     const isIndiaSelected = formData.country === 'IN';
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 relative overflow-x-hidden">
+        <div className="min-h-screen bg-gradient-to-br font-sans from-blue-50 via-white to-purple-50 relative overflow-x-hidden">
             {/* Background Effects - Fixed */}
             <div className="fixed inset-0 overflow-hidden pointer-events-none">
                 <div className="absolute -top-40 -right-40 w-96 h-96 bg-blue-200/40 rounded-full blur-3xl"></div>

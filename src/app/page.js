@@ -519,7 +519,7 @@ export default function Home() {
   };
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#eef2f1]">
+    <main className="relative font-sans min-h-screen overflow-hidden bg-[#eef2f1]">
 
       <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"

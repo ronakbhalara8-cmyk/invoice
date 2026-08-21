@@ -109,6 +109,9 @@ export default function InvoiceForm({ onCancel, onInvoiceCreated }) {
     const [currencyCode, setCurrencyCode] = useState(DEFAULT_CURRENCY);
     const [openDropdownId, setOpenDropdownId] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [isCustomerDropdownOpen, setIsCustomerDropdownOpen] = useState(false);
+    const [customerSearchTerm, setCustomerSearchTerm] = useState('');
+    const customerDropdownRef = useRef(null);
     const dropdownRefs = useRef({});
     const [errors, setErrors] = useState({});
 
@@ -164,6 +167,11 @@ export default function InvoiceForm({ onCancel, onInvoiceCreated }) {
 
     useEffect(() => {
         const handleClickOutside = (event) => {
+            if (isCustomerDropdownOpen && customerDropdownRef.current && !customerDropdownRef.current.contains(event.target)) {
+                setIsCustomerDropdownOpen(false);
+                setCustomerSearchTerm('');
+            }
+
             if (openDropdownId !== null) {
                 const ref = dropdownRefs.current[openDropdownId];
                 if (ref && !ref.contains(event.target)) {
@@ -175,10 +183,9 @@ export default function InvoiceForm({ onCancel, onInvoiceCreated }) {
 
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [openDropdownId]);
+    }, [isCustomerDropdownOpen, openDropdownId]);
 
-    const handleCustomerSelect = (event) => {
-        const customerId = event.target.value;
+    const handleCustomerSelect = (customerId) => {
         const customer = customers.find((item) => String(item.id) === String(customerId));
         setSelectedCustomerId(customerId);
 
@@ -194,8 +201,8 @@ export default function InvoiceForm({ onCancel, onInvoiceCreated }) {
         const selectedCurrency = normalizeCurrencyCode(customer.currency);
 
         const defaultCustomerName = [customer.first_name, customer.last_name].filter(Boolean).join(' ').trim() || customer.company_name || 'Customer';
-        const billingCustomerName = billingAddress.attention || defaultCustomerName;
-        const shippingCustomerName = shippingAddress.attention || defaultCustomerName;
+        const billingCustomerName = billingAddress.attention;
+        const shippingCustomerName = shippingAddress.attention || [customer.first_name, customer.last_name].filter(Boolean).join(' ').trim();
 
         setSelectedCustomerFirstName(customer.first_name || '');
         setSelectedCustomerLastName(customer.last_name || '');
@@ -210,19 +217,33 @@ export default function InvoiceForm({ onCancel, onInvoiceCreated }) {
             customer_name: billingCustomerName,
             company_name: customer.company_name || '',
             address: billingAddress.address || '',
-            email: billingAddress.email || customer.email || '',
-            phone: sanitizePhoneValue(billingAddress.phone || customer.phone || ''),
+            email: billingAddress.email,
+            phone: sanitizePhoneValue(billingAddress.phone),
         });
         setShippingTo({
             customer_name: shippingCustomerName,
             company_name: customer.company_name || '',
-            address: shippingAddress.address || billingAddress.address || '',
-            email: shippingAddress.email || billingAddress.email || customer.email || '',
-            phone: sanitizePhoneValue(shippingAddress.phone || billingAddress.phone || customer.phone || ''),
+            address: shippingAddress.address,
+            email: shippingAddress.email,
+            phone: sanitizePhoneValue(shippingAddress.phone),
         });
         setCurrencyCode(selectedCurrency);
         setErrors({});
+        setIsCustomerDropdownOpen(false);
+        setCustomerSearchTerm('');
     };
+
+    const filteredCustomers = customers.filter((customer) => {
+        const searchableText = [
+            customer.first_name,
+            customer.last_name,
+            customer.company_name,
+            customer.email,
+            customer.phone,
+        ].filter(Boolean).join(' ').toLowerCase();
+
+        return searchableText.includes(customerSearchTerm.trim().toLowerCase());
+    });
 
     const subtotal = useMemo(
         () => items.reduce((sum, item) => sum + calculateItemAmount(item), 0),
@@ -299,6 +320,10 @@ export default function InvoiceForm({ onCancel, onInvoiceCreated }) {
 
     const validateForm = () => {
         const newErrors = {};
+
+        if (!selectedCustomerId) {
+            newErrors.customer = 'Please select customer';
+        }
 
         if (!companyInfo.company_name?.trim()) {
             newErrors.companyName = 'Company name is required';
@@ -385,6 +410,7 @@ export default function InvoiceForm({ onCancel, onInvoiceCreated }) {
         const payload = {
             customer_first_name: selectedCustomerFirstName,
             customer_last_name: selectedCustomerLastName,
+            customer_id: selectedCustomerId || null,
             currency: currencyCode,
             companyInfo: {
                 company_name: companyInfo.company_name,
@@ -497,21 +523,56 @@ export default function InvoiceForm({ onCancel, onInvoiceCreated }) {
                     </div>
                     <div className="space-y-2">
                         <label className="text-sm font-medium text-slate-700">Select customer</label>
-                        <select
-                            value={selectedCustomerId}
-                            onChange={handleCustomerSelect}
-                            className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white"
-                        >
-                            <option value="">Choose a customer</option>
-                            {customers.map((customer) => {
-                                const customerDisplayName = [customer.first_name, customer.last_name].filter(Boolean).join(' ').trim() || customer.company_name || 'Customer';
-                                return (
-                                    <option key={customer.id} value={customer.id}>
-                                        {customerDisplayName} {customer.company_name ? `- ${customer.company_name}` : ''}
-                                    </option>
-                                );
-                            })}
-                        </select>
+                        <div>
+                            <div className="relative" ref={customerDropdownRef}>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsCustomerDropdownOpen((isOpen) => !isOpen)}
+                                    className="flex w-full items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-left text-slate-900 outline-none transition hover:bg-white focus:border-blue-500 focus:bg-white"
+                                    aria-haspopup="listbox"
+                                    aria-expanded={isCustomerDropdownOpen}
+                                >
+                                    <span>
+                                        {selectedCustomerId ? (() => {
+                                            const selectedCustomer = customers.find((customer) => String(customer.id) === String(selectedCustomerId));
+                                            return [selectedCustomer?.first_name, selectedCustomer?.last_name].filter(Boolean).join(' ').trim() || selectedCustomer?.company_name || 'Customer';
+                                        })() : 'Choose a customer'}
+                                    </span>
+                                    <ChevronDown className="h-4 w-4 text-slate-500" />
+                                </button>
+                                {isCustomerDropdownOpen && (
+                                    <div className="absolute left-0 right-0 z-20 mt-1 max-h-60 overflow-auto rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
+                                        <div className="sticky -top-1 border-b border-slate-200 bg-white p-2">
+                                            <input
+                                                type="text"
+                                                value={customerSearchTerm}
+                                                onChange={(event) => setCustomerSearchTerm(event.target.value)}
+                                                placeholder="Search customer..."
+                                                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500"
+                                                autoFocus
+                                            />
+                                        </div>
+                                        {filteredCustomers.length > 0 ? filteredCustomers.map((customer) => {
+                                            const customerDisplayName = [customer.first_name, customer.last_name].filter(Boolean).join(' ').trim() || customer.company_name || 'Customer';
+                                            return (
+                                                <button
+                                                    key={customer.id}
+                                                    type="button"
+                                                    onClick={() => handleCustomerSelect(customer.id)}
+                                                    className=" w-full px-4 py-2 text-left text-sm flex items-center justify-between text-slate-900 transition hover:bg-blue-50"
+                                                >
+                                                    <span className="font-medium">{customerDisplayName}</span>
+                                                    {customer.company_name && <span className="text-xs text-slate-500">{customer.company_name}</span>}
+                                                </button>
+                                            );
+                                        }) : (
+                                            <div className="px-4 py-3 text-sm text-slate-500">No customers found</div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                            {errors.customer && <p className="mt-0.75 text-xs text-red-500">{errors.customer}</p>}
+                        </div>
                     </div>
                     <div className="space-y-2">
                         <label className="text-sm font-medium text-slate-700">Company name <span className="text-red-500">*</span></label>
@@ -524,7 +585,7 @@ export default function InvoiceForm({ onCancel, onInvoiceCreated }) {
                             className={`w-full rounded-xl border ${errors.companyName ? 'border-red-500' : 'border-slate-200'} bg-slate-50 px-3 py-2.5 text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white`}
                             placeholder="Acme Pvt Ltd"
                         />
-                        {errors.companyName && <p className="mt-1 text-xs text-red-500">{errors.companyName}</p>}
+                        {errors.companyName && <p className="mt-0.75 text-xs text-red-500">{errors.companyName}</p>}
                     </div>
                     <div className="space-y-2">
                         <label className="text-sm font-medium text-slate-700">Currency</label>
@@ -534,7 +595,9 @@ export default function InvoiceForm({ onCancel, onInvoiceCreated }) {
                             className="w-full rounded-xl border border-slate-200 bg-slate-100 px-3 py-2.5 text-slate-900 outline-none"
                         />
                     </div>
-                    <div className="space-y-2 md:col-span-2">
+                </section>
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
                         <label className="text-sm font-medium text-slate-700">Company address <span className="text-red-500">*</span></label>
                         <input
                             value={companyInfo.company_address}
@@ -547,7 +610,7 @@ export default function InvoiceForm({ onCancel, onInvoiceCreated }) {
                         />
                         {errors.companyAddress && <p className="text-xs text-red-500">{errors.companyAddress}</p>}
                     </div>
-                    <div className="space-y-2 md:col-span-3">
+                    <div className="space-y-2">
                         <label className="text-sm font-medium text-slate-700">Company GST Number</label>
                         <input
                             value={companyInfo.company_gst_number}
@@ -556,7 +619,7 @@ export default function InvoiceForm({ onCancel, onInvoiceCreated }) {
                             placeholder="27ABCDE1234F1Z5"
                         />
                     </div>
-                </section>
+                </div>
 
                 <section className="grid gap-5 md:grid-cols-2">
                     <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
@@ -983,6 +1046,6 @@ export default function InvoiceForm({ onCancel, onInvoiceCreated }) {
                     </button>
                 </div>
             </form>
-        </div>
+        </div >
     );
 }

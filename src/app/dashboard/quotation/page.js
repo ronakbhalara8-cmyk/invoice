@@ -55,7 +55,7 @@ function QuotationPageContent() {
 
     return (
         <>
-            <div className="space-y-6">
+            <div className="space-y-6 font-sans">
                 {showForm ? (
                     <QuotationForm
                         quotation={editingQuotation}
@@ -68,21 +68,13 @@ function QuotationPageContent() {
                 ) : (
                     <>
                         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                            <div className="flex items-center gap-3">
-                                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-100 text-blue-700">
-                                    <FileCheck2 className="h-6 w-6" />
-                                </div>
-                                <div>
-                                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-600">
-                                        Sales documents
-                                    </p>
-                                    <h1 className="text-3xl font-bold text-slate-900">Quotations</h1>
-                                </div>
+                            <div>
+                                <h1 className="text-2xl font-bold text-gray-900">Quotations</h1>
+                                <p className="mt-1 text-sm text-gray-500">{quotations.length} quotations • Manage your quotations and track opportunities efficiently</p>
                             </div>
                             <button
-                                type="button"
                                 onClick={openCreate}
-                                className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-500/20 hover:bg-blue-500"
+                                className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-blue-700"
                             >
                                 <FilePlus2 className="h-4 w-4" />
                                 Create quotation

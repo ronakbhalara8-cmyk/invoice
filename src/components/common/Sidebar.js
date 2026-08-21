@@ -14,6 +14,7 @@ import {
   ChevronLeft,
   X,
   Users
+  , Banknote
 } from 'lucide-react';
 
 export default function Sidebar({ isOpen, onClose, isCollapsed, onToggle }) {
@@ -48,6 +49,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggle }) {
     { name: 'Items', href: '/dashboard/item', icon: Package },
     { name: 'Customers', href: '/dashboard/customer', icon: Users },
     { name: 'Invoice', href: '/dashboard/invoice', icon: FileText },
+    { name: 'Payments', href: '/dashboard/payment', icon: Banknote },
     { name: 'Quotation', href: '/dashboard/quotation', icon: FileCheck2 },
     { name: 'Reports', href: '/dashboard/report', icon: BarChart3 },
   ];
@@ -64,7 +66,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggle }) {
 
       {/* Sidebar */}
       <div className={`
-        fixed inset-y-0 left-0 z-50 ${isCollapsed ? 'w-20' : 'w-64'} bg-slate-900 text-slate-100 transform transition-all duration-300 ease-in-out flex flex-col overflow-visible
+        fixed inset-y-0 left-0 font-sans z-50 ${isCollapsed ? 'w-20' : 'w-64'} bg-slate-900 text-slate-100 transform transition-all duration-300 ease-in-out flex flex-col overflow-visible
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
         lg:translate-x-0 lg:fixed
       `}>

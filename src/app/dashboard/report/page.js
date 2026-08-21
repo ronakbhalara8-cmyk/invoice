@@ -160,17 +160,11 @@ export default function ReportsPage() {
     ];
 
     return (
-        <main className="mx-auto w-full max-w-7xl space-y-6 pb-8">
+        <main className="mx-auto w-full font-sans max-w-7xl space-y-6 pb-8">
             <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
                 <div>
-                    <div className="mb-2 flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.12em] text-blue-600">
-                        <BarChart3 className="h-4 w-4" />
-                        Business intelligence
-                    </div>
-                    <h1 className="text-3xl font-bold tracking-tight text-slate-900">Reports</h1>
-                    <p className="mt-1 text-sm text-slate-500">
-                        Understand sales performance, customer value, and stock at a glance.
-                    </p>
+                    <h1 className="text-2xl font-bold text-gray-900">Reports</h1>
+                    <p className="mt-1 text-sm text-gray-500">Understand sales performance, customer value, and stock at a glance.</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
                     <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm">

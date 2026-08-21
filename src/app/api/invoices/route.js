@@ -53,6 +53,7 @@ export async function GET(request) {
       const query = `
         SELECT
           id,
+          customer_id,
           invoice_number,
           customer_name,
           company_info,
@@ -62,6 +63,9 @@ export async function GET(request) {
           subtotal,
           gst_rate,
           grand_total,
+          paid_amount,
+          payment_status,
+          due_date,
           terms,
           created_at
         FROM invoices
@@ -101,6 +105,7 @@ export async function POST(request) {
     const body = await request.json();
     const {
       currency,
+      customer_id,
       customer_first_name,
       customer_last_name,
       invoiceNumber,
@@ -152,6 +157,7 @@ export async function POST(request) {
       const insertQuery = `
         INSERT INTO invoices (
           organization_id,
+          customer_id,
           invoice_number,
           customer_name,
           company_info,
@@ -164,7 +170,7 @@ export async function POST(request) {
           terms,
           created_at,
           updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW())
         RETURNING id
       `;
 
@@ -175,6 +181,7 @@ export async function POST(request) {
 
       const insertValues = [
         auth.organizationId,
+        customer_id || null,
         generatedNumber,
         customerName,
         JSON.stringify(companyInfoWithCurrency || {}),
@@ -196,6 +203,7 @@ export async function POST(request) {
         success: true,
         data: {
           id: invoiceId,
+          customer_id: customer_id || null,
           invoice_number: generatedNumber,
           customer_name: customerName,
           currency: currency || 'INR',
@@ -208,6 +216,9 @@ export async function POST(request) {
           tax_amount: invoiceTaxAmount,
           gst_rate: Number(gstRate || 0),
           grand_total: invoiceGrandTotal,
+          paid_amount: 0,
+          payment_status: 'UNPAID',
+          due_date: new Date(Date.now() + 15 * 86400000).toISOString().slice(0, 10),
           terms: terms || '',
           created_at: new Date().toISOString(),
         },

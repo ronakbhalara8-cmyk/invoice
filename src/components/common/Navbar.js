@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { BarChart3, FileCheck2, FileText, Package, Plus, Search, Users, X } from 'lucide-react';
+import { Banknote, BarChart3, FileCheck2, FileText, Package, Plus, Search, Users, X } from 'lucide-react';
 
 const searchItems = [
   { label: 'Item List', group: 'Items', href: '/dashboard/item', icon: Package },
@@ -10,6 +10,7 @@ const searchItems = [
   { label: 'Create Customer', group: 'Customers', href: '/dashboard/customer?create=true', icon: Plus },
   { label: 'Invoice List', group: 'Invoices', href: '/dashboard/invoice', icon: FileText },
   { label: 'Generate Invoice', group: 'Invoices', href: '/dashboard/invoice?create=true', icon: Plus },
+  { label: 'Payments & Receivables', group: 'Payments', href: '/dashboard/payment', icon: Banknote },
   { label: 'Quotation List', group: 'Quotations', href: '/dashboard/quotation', icon: FileCheck2 },
   { label: 'Generate Quotation', group: 'Quotations', href: '/dashboard/quotation?create=true', icon: Plus },
   { label: 'Reports', group: 'Reports', href: '/dashboard/report', icon: BarChart3 },
@@ -79,7 +80,7 @@ export default function Navbar({ user, onMenuClick, onProfileClick }) {
 
   return (
     <>
-      <header className="sticky top-0 z-30 border-b border-blue-100 bg-white/90 shadow-sm backdrop-blur">
+      <header className="sticky top-0 z-30 border-b font-sans border-blue-100 bg-white/90 shadow-sm backdrop-blur">
         <div className="px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
             {/* Left side - Menu button and Page Title */}
@@ -145,7 +146,7 @@ export default function Navbar({ user, onMenuClick, onProfileClick }) {
 
       {isSearchMounted && (
         <div
-          className={`fixed inset-0 z-60 bg-black/50 transition-opacity duration-300 ease-out ${isSearchOpen ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
+          className={`fixed inset-0 font-sans z-60 bg-black/50 transition-opacity duration-300 ease-out ${isSearchOpen ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
           onClick={closeSearch}
         >
           <div

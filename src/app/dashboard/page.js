@@ -106,7 +106,7 @@ export default function Dashboard() {
     const visibleItems = data.items.slice(0, 4);
 
     return (
-        <main className="mx-auto w-full max-w-7xl space-y-6 pb-8">
+        <main className="mx-auto font-sans w-full max-w-7xl space-y-6 pb-8">
             <section
                 className="relative overflow-hidden rounded-3xl bg-blue-900 bg-cover bg-center px-6 py-4 text-white sm:px-8 sm:py-5"
                 style={{ backgroundImage: "url('/bg-image.webp')" }}
