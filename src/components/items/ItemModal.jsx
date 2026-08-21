@@ -212,7 +212,7 @@ export default function ItemModal({
 
               <div className="flex-1 space-y-4">
                 <div className="space-y-1.5">
-                  <label className="block text-sm font-medium text-gray-700">Item Name *</label>
+                  <label className="block text-sm font-medium text-gray-700">Item Name <span className="text-red-500">*</span></label>
                   <input
                     type="text"
                     name="name"
@@ -237,7 +237,7 @@ export default function ItemModal({
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="block text-sm font-medium text-gray-700">Price (₹) *</label>
+                  <label className="block text-sm font-medium text-gray-700">Price (₹) <span className="text-red-500">*</span></label>
                   <input
                     type="number"
                     min="1"

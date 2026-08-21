@@ -61,16 +61,31 @@ export function downloadInvoicePdf(invoice) {
     const taxAmountValue = Number(invoice.tax_amount || ((subtotalValue * gstRateValue) / 100));
     const grandTotalValue = Number(invoice.grand_total || (subtotalValue + taxAmountValue));
 
-    // Page background
-    doc.setFillColor(245, 247, 250);
-    doc.rect(0, 0, pageWidth, pageHeight, 'F');
+    const drawPageFrame = () => {
+        doc.setFillColor(245, 247, 250);
+        doc.rect(0, 0, pageWidth, pageHeight, 'F');
+        doc.setFillColor(255, 255, 255);
+        doc.roundedRect(30, 30, 540, 780, 12, 12, 'F');
+        doc.setDrawColor(200, 208, 218);
+        doc.setLineWidth(1);
+        doc.roundedRect(30, 30, 540, 780, 12, 12, 'S');
+    };
 
-    // Main white card
-    doc.setFillColor(255, 255, 255);
-    doc.roundedRect(30, 30, 540, 780, 12, 12, 'F');
-    doc.setDrawColor(200, 208, 218);
-    doc.setLineWidth(1);
-    doc.roundedRect(30, 30, 540, 780, 12, 12, 'S');
+    const drawTableHeader = (headerY) => {
+        doc.setFillColor(37, 99, 235);
+        doc.roundedRect(45, headerY, 510, 28, 4, 4, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        doc.text('#', col1, headerY + 19);
+        doc.text('Item & Description', col2, headerY + 19);
+        doc.text('Qty', col3, headerY + 19);
+        doc.text('Rate', col4, headerY + 19, { align: 'right' });
+        doc.text('Disc.', col5, headerY + 19, { align: 'right' });
+        doc.text('Amount', col7, headerY + 19, { align: 'right' });
+    };
+
+    drawPageFrame();
 
     // ===== HEADER SECTION =====
     let currentY = 55;
@@ -224,15 +239,6 @@ export function downloadInvoicePdf(invoice) {
     // ===== ITEMS TABLE =====
     currentY = currentY + 95 + 30;
 
-    // Table header background
-    doc.setFillColor(37, 99, 235);
-    doc.roundedRect(45, currentY, 510, 28, 4, 4, 'F');
-
-    // Table header text
-    doc.setTextColor(255, 255, 255);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9);
-
     // Column positions
     const col1 = 58;
     const col2 = 95;
@@ -242,12 +248,7 @@ export function downloadInvoicePdf(invoice) {
     const col6 = 460;
     const col7 = 530;
 
-    doc.text('#', col1, currentY + 19);
-    doc.text('Item & Description', col2, currentY + 19);
-    doc.text('Qty', col3, currentY + 19);
-    doc.text('Rate', col4, currentY + 19, { align: 'right' });
-    doc.text('Disc.', col5, currentY + 19, { align: 'right' });
-    doc.text('Amount', col7, currentY + 19, { align: 'right' });
+    drawTableHeader(currentY);
 
     // Table rows
     let rowY = currentY + 32;
@@ -270,6 +271,16 @@ export function downloadInvoicePdf(invoice) {
         const lineHeight = 10;
         const textHeight = visibleName.length * lineHeight;
         const rowHeight = Math.max(32, textHeight + 14);
+
+        if (rowY + rowHeight > pageHeight - 90) {
+            doc.addPage();
+            drawPageFrame();
+            drawTableHeader(55);
+            rowY = 87;
+            doc.setTextColor(17, 24, 39);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(9);
+        }
 
         if (index % 2 === 0) {
             doc.setFillColor(248, 249, 251);
@@ -302,7 +313,12 @@ export function downloadInvoicePdf(invoice) {
     });
 
     // ===== SUMMARY SECTION =====
-    const summaryY = Math.max(rowY + 35, 540);
+    let summaryY = Math.max(rowY + 35, 540);
+    if (summaryY + 260 > pageHeight - 30) {
+        doc.addPage();
+        drawPageFrame();
+        summaryY = 55;
+    }
 
     // Summary box
     doc.setFillColor(248, 250, 252);

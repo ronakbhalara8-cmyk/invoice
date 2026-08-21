@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import ItemsTable from "@/components/items/ItemsTable";
 import ItemModal from "@/components/items/ItemModal";
 import ItemDetailSidebar from "@/components/items/ItemDetailSidebar";
 import DeleteConfirmModal from "@/components/common/DeleteConfirmModal";
 import { toast } from "react-toastify";
 
-export default function ItemsPage() {
+function ItemsPageContent() {
+  const searchParams = useSearchParams();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedItem, setSelectedItem] = useState(null);
@@ -25,6 +27,10 @@ export default function ItemsPage() {
   useEffect(() => {
     fetchItems();
   }, []);
+
+  useEffect(() => {
+    if (searchParams.get('create') === 'true') openAddModal();
+  }, [searchParams]);
 
   const fetchItems = async () => {
     try {
@@ -176,5 +182,13 @@ export default function ItemsPage() {
         onDeleted={handleDeleteItem}
       />
     </>
+  );
+}
+
+export default function ItemsPage() {
+  return (
+    <Suspense fallback={<div className="min-h-32" />}>
+      <ItemsPageContent />
+    </Suspense>
   );
 }

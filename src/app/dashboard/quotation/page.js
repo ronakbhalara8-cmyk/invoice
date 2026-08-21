@@ -1,13 +1,15 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { FileCheck2, FilePlus2 } from 'lucide-react';
 import QuotationForm from '@/components/quotations/QuotationForm';
 import QuotationList from '@/components/quotations/QuotationList';
 import DeleteConfirmModal from '@/components/common/DeleteConfirmModal';
 import { downloadQuotationPdf } from '@/components/quotations/QuotationPDF';
 
-export default function QuotationPage() {
+function QuotationPageContent() {
+    const searchParams = useSearchParams();
     const [showForm, setShowForm] = useState(false);
     const [quotations, setQuotations] = useState([]);
     const [editingQuotation, setEditingQuotation] = useState(null);
@@ -31,6 +33,10 @@ export default function QuotationPage() {
     useEffect(() => {
         loadQuotations();
     }, []);
+
+    useEffect(() => {
+        if (searchParams.get('create') === 'true') openCreate();
+    }, [searchParams]);
 
     const openCreate = () => {
         setEditingQuotation(null);
@@ -110,5 +116,13 @@ export default function QuotationPage() {
                 }}
             />
         </>
+    );
+}
+
+export default function QuotationPage() {
+    return (
+        <Suspense fallback={<div className="min-h-32" />}>
+            <QuotationPageContent />
+        </Suspense>
     );
 }
