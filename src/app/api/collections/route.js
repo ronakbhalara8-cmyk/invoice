@@ -125,7 +125,8 @@ export async function POST(request) {
     try {
         const result = await db.query(
             `INSERT INTO invoice_followups (organization_id, invoice_id, customer_id, status, next_followup_date, notes, contacted_at)
-       SELECT $1, i.id, i.customer_id, $3, $4, $5, CASE WHEN $3 = 'PENDING' THEN NULL ELSE NOW() END
+    SELECT $1, i.id, i.customer_id, $3::varchar(30), $4::date, $5::text,
+        CASE WHEN $3::varchar(30) = 'PENDING' THEN NULL ELSE NOW() END
        FROM invoices i
        WHERE i.id = $2 AND i.organization_id = $1
        RETURNING *`,
