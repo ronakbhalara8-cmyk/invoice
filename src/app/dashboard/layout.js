@@ -1,5 +1,7 @@
 "use client";
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { toast } from 'react-toastify';
 import Sidebar from '@/components/common/Sidebar';
 import Navbar from '@/components/common/Navbar';
 import ProfileEditModal from '@/components/common/ProfileEditModal';
@@ -21,6 +23,29 @@ export default function DashboardLayout({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isProfilePanelOpen, setIsProfilePanelOpen] = useState(false);
+  const [tokenExpiresAt, setTokenExpiresAt] = useState(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!tokenExpiresAt) return undefined;
+
+    const handleTokenExpired = async () => {
+      try {
+        await fetch('/api/auth/logout', { method: 'POST' });
+      } catch (error) {
+        console.error('Automatic logout error:', error);
+      } finally {
+        sessionStorage.clear();
+        toast.error('Your token is expired, please sign in.');
+        router.replace('/');
+      }
+    };
+
+    const delay = Math.max(tokenExpiresAt - Date.now(), 0);
+    const timeoutId = window.setTimeout(handleTokenExpired, delay);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [router, tokenExpiresAt]);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -40,6 +65,7 @@ export default function DashboardLayout({ children }) {
           const text = await response.text();
           const result = text ? JSON.parse(text) : null;
           if (result?.data) {
+            setTokenExpiresAt(result.data.tokenExpiresAt || null);
             const userData = {
               id: result.data.userId,
               email: result.data.email,
@@ -60,6 +86,11 @@ export default function DashboardLayout({ children }) {
             sessionStorage.setItem('currentUser', JSON.stringify(userData));
           }
         } else {
+          if (response.status === 401) {
+            setTokenExpiresAt(Date.now());
+            return;
+          }
+
           // Fallback to pendingRegistration in sessionStorage
           const pending = parseJsonSafely(sessionStorage.getItem('pendingRegistration'));
           if (pending) {

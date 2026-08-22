@@ -17,7 +17,11 @@ function getAuthenticatedUser(request) {
         if (!decoded?.userId) {
             return { error: NextResponse.json({ error: true, message: 'Invalid token payload' }, { status: 401 }) };
         }
-        return { userId: decoded.userId, organizationId: decoded.organizationId || null };
+        return {
+            userId: decoded.userId,
+            organizationId: decoded.organizationId || null,
+            expiresAt: decoded.exp ? decoded.exp * 1000 : null,
+        };
     } catch (error) {
         return { error: NextResponse.json({ error: true, message: 'Invalid token' }, { status: 401 }) };
     }
@@ -30,7 +34,7 @@ export async function GET(request) {
             return auth.error;
         }
 
-        const { userId, organizationId } = auth;
+        const { userId, organizationId, expiresAt } = auth;
         const client = await db.connect();
 
         try {
@@ -85,6 +89,7 @@ export async function GET(request) {
                     gstNumber: organization?.gst_number || '',
                     organizationId: organization?.id || null,
                     createdAt: user.created_at,
+                    tokenExpiresAt: expiresAt,
                 },
             });
         } finally {

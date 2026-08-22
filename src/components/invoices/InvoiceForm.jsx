@@ -111,6 +111,11 @@ export default function InvoiceForm({ onCancel, onInvoiceCreated }) {
     const [searchTerm, setSearchTerm] = useState('');
     const [isCustomerDropdownOpen, setIsCustomerDropdownOpen] = useState(false);
     const [customerSearchTerm, setCustomerSearchTerm] = useState('');
+    const [isAddCustomerOpen, setIsAddCustomerOpen] = useState(false);
+    const [newCustomerName, setNewCustomerName] = useState('');
+    const [newCustomerPhone, setNewCustomerPhone] = useState('');
+    const [addingCustomer, setAddingCustomer] = useState(false);
+    const [addCustomerError, setAddCustomerError] = useState('');
     const customerDropdownRef = useRef(null);
     const dropdownRefs = useRef({});
     const [errors, setErrors] = useState({});
@@ -185,8 +190,8 @@ export default function InvoiceForm({ onCancel, onInvoiceCreated }) {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [isCustomerDropdownOpen, openDropdownId]);
 
-    const handleCustomerSelect = (customerId) => {
-        const customer = customers.find((item) => String(item.id) === String(customerId));
+    const handleCustomerSelect = (customerId, customerOverride = null) => {
+        const customer = customerOverride || customers.find((item) => String(item.id) === String(customerId));
         setSelectedCustomerId(customerId);
 
         if (!customer) {
@@ -201,8 +206,8 @@ export default function InvoiceForm({ onCancel, onInvoiceCreated }) {
         const selectedCurrency = normalizeCurrencyCode(customer.currency);
 
         const defaultCustomerName = [customer.first_name, customer.last_name].filter(Boolean).join(' ').trim() || customer.company_name || 'Customer';
-        const billingCustomerName = billingAddress.attention;
-        const shippingCustomerName = shippingAddress.attention || [customer.first_name, customer.last_name].filter(Boolean).join(' ').trim();
+        const billingCustomerName = billingAddress.attention || defaultCustomerName;
+        const shippingCustomerName = shippingAddress.attention || defaultCustomerName;
 
         setSelectedCustomerFirstName(customer.first_name || '');
         setSelectedCustomerLastName(customer.last_name || '');
@@ -217,20 +222,75 @@ export default function InvoiceForm({ onCancel, onInvoiceCreated }) {
             customer_name: billingCustomerName,
             company_name: customer.company_name || '',
             address: billingAddress.address || '',
-            email: billingAddress.email,
-            phone: sanitizePhoneValue(billingAddress.phone),
+            email: billingAddress.email || '',
+            phone: sanitizePhoneValue(billingAddress.phone || customer.phone),
         });
         setShippingTo({
             customer_name: shippingCustomerName,
             company_name: customer.company_name || '',
-            address: shippingAddress.address,
-            email: shippingAddress.email,
-            phone: sanitizePhoneValue(shippingAddress.phone),
+            address: shippingAddress.address || '',
+            email: shippingAddress.email || '',
+            phone: sanitizePhoneValue(shippingAddress.phone || customer.phone),
         });
         setCurrencyCode(selectedCurrency);
         setErrors({});
         setIsCustomerDropdownOpen(false);
         setCustomerSearchTerm('');
+    };
+
+    const openAddCustomer = () => {
+        setNewCustomerName('');
+        setNewCustomerPhone('');
+        setAddCustomerError('');
+        setIsCustomerDropdownOpen(false);
+        setIsAddCustomerOpen(true);
+    };
+
+    const handleAddCustomer = async (event) => {
+        event.preventDefault();
+        const name = newCustomerName.trim();
+        const phone = sanitizePhoneValue(newCustomerPhone);
+
+        if (!name) {
+            setAddCustomerError('Customer name is required.');
+            return;
+        }
+
+        if (!isValidPhoneNumber(phone)) {
+            setAddCustomerError('Mobile number must be 10 digits starting with 6, 7, 8, or 9.');
+            return;
+        }
+
+        try {
+            setAddingCustomer(true);
+            setAddCustomerError('');
+            const response = await fetch('/api/customers', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    customer_type: 'Individual',
+                    first_name: name,
+                    phone,
+                    currency: DEFAULT_CURRENCY,
+                }),
+            });
+            const result = await response.json();
+
+            if (!response.ok || !result?.success || !result.data) {
+                throw new Error(result?.message || 'Unable to add customer.');
+            }
+
+            const customer = result.data;
+            setCustomers((prev) => [customer, ...prev]);
+            handleCustomerSelect(customer.id, customer);
+            setIsAddCustomerOpen(false);
+            toast.success('Customer added successfully.');
+        } catch (error) {
+            console.error('Failed to add customer from invoice:', error);
+            setAddCustomerError(error.message || 'Unable to add customer.');
+        } finally {
+            setAddingCustomer(false);
+        }
     };
 
     const filteredCustomers = customers.filter((customer) => {
@@ -522,7 +582,17 @@ export default function InvoiceForm({ onCancel, onInvoiceCreated }) {
                         <h3 className="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Company Info</h3>
                     </div>
                     <div className="space-y-2">
-                        <label className="text-sm font-medium text-slate-700">Select customer</label>
+                        <div className="flex items-center justify-between gap-3">
+                            <label className="text-sm font-medium text-slate-700">Select customer</label>
+                            <button
+                                type="button"
+                                onClick={openAddCustomer}
+                                className="inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 transition hover:text-blue-700"
+                            >
+                                <Plus className="h-4 w-4" />
+                                Add customer
+                            </button>
+                        </div>
                         <div>
                             <div className="relative" ref={customerDropdownRef}>
                                 <button
@@ -1046,6 +1116,70 @@ export default function InvoiceForm({ onCancel, onInvoiceCreated }) {
                     </button>
                 </div>
             </form>
+            {isAddCustomerOpen && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/40 p-4" role="presentation">
+                    <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="add-customer-title">
+                        <div className="mb-5 flex items-center justify-between gap-4">
+                            <div>
+                                <h3 id="add-customer-title" className="text-xl font-semibold text-slate-900">Add customer</h3>
+                                <p className="mt-1 text-sm text-slate-500">Add a customer without leaving this invoice.</p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setIsAddCustomerOpen(false)}
+                                className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+                                aria-label="Close add customer dialog"
+                            >
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleAddCustomer} className="space-y-4">
+                            <div>
+                                <label htmlFor="invoice-customer-name" className="mb-1.5 block text-sm font-medium text-slate-700">Customer name</label>
+                                <input
+                                    id="invoice-customer-name"
+                                    value={newCustomerName}
+                                    onChange={(event) => setNewCustomerName(event.target.value)}
+                                    className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-slate-900 outline-none focus:border-blue-500"
+                                    placeholder="Enter customer name"
+                                    autoFocus
+                                />
+                            </div>
+                            <div>
+                                <label htmlFor="invoice-customer-mobile" className="mb-1.5 block text-sm font-medium text-slate-700">Mobile number</label>
+                                <input
+                                    id="invoice-customer-mobile"
+                                    type="tel"
+                                    inputMode="numeric"
+                                    value={newCustomerPhone}
+                                    onChange={(event) => setNewCustomerPhone(sanitizePhoneValue(event.target.value))}
+                                    className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-slate-900 outline-none focus:border-blue-500"
+                                    placeholder="10-digit mobile number"
+                                    maxLength={10}
+                                />
+                            </div>
+                            {addCustomerError && <p className="text-sm text-red-600">{addCustomerError}</p>}
+                            <div className="flex justify-end gap-3 pt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsAddCustomerOpen(false)}
+                                    className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={addingCustomer}
+                                    className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                    {addingCustomer ? 'Adding...' : 'Add customer'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div >
     );
 }
