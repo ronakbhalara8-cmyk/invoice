@@ -108,6 +108,21 @@ export default function CollectionsPage() {
 
     const saveNotes = async (row, event) => updateFollowup(row, row.followup_status, event.target.value);
 
+    const Status = (status) => {
+        switch (status) {
+            case 'UNPAID':
+                return <span className="text-xs font-semibold text-orange-700">Unpaid</span>;
+            case 'OVERDUE':
+                return <span className="text-xs font-semibold text-red-700">Overdue</span>;
+            case 'PAID':
+                return <span className="text-xs font-semibold text-emerald-700">Paid</span>;
+            case 'PARTIALLY_PAID':
+                return <span className="text-xs font-semibold text-yellow-700">Partially Paid</span>;
+            default:
+                return <span className="text-xs font-semibold text-slate-700">{statusLabels[status] || status}</span>;
+        }
+    }
+
     const openEditor = (row) => {
         setEditingRow(row);
         setEditForm({
@@ -259,7 +274,7 @@ ${senderDetails}`;
                                             <p className={row.payment_status === 'OVERDUE' ? 'font-semibold text-rose-700' : 'text-slate-600'}>
                                                 {dateLabel(row.due_date)}
                                             </p>
-                                            <p className="mt-1 text-xs text-slate-400">{row.payment_status}</p>
+                                            <p className="mt-1 text-xs text-slate-400">{Status(row.payment_status)}</p>
                                         </td>
                                         <td className="wrap-break-word px-3 py-4 font-bold text-slate-900 sm:px-5">
                                             {money(row.balance_due)}
