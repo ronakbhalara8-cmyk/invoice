@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Banknote, BarChart3, FileCheck2, FileText, Package, Plus, Search, Users, X } from 'lucide-react';
+import { Banknote, BarChart3, FileCheck2, FileText, HandCoins, Package, Plus, Search, Users, X } from 'lucide-react';
 
 const searchItems = [
   { label: 'Item List', group: 'Items', href: '/dashboard/item', icon: Package },
@@ -11,6 +11,7 @@ const searchItems = [
   { label: 'Invoice List', group: 'Invoices', href: '/dashboard/invoice', icon: FileText },
   { label: 'Generate Invoice', group: 'Invoices', href: '/dashboard/invoice?create=true', icon: Plus },
   { label: 'Payments & Receivables', group: 'Payments', href: '/dashboard/payment', icon: Banknote },
+  { label: 'Payment follow-up', group: 'Collections', href: '/dashboard/collection', icon: HandCoins },
   { label: 'Quotation List', group: 'Quotations', href: '/dashboard/quotation', icon: FileCheck2 },
   { label: 'Generate Quotation', group: 'Quotations', href: '/dashboard/quotation?create=true', icon: Plus },
   { label: 'Reports', group: 'Reports', href: '/dashboard/report', icon: BarChart3 },

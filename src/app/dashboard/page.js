@@ -47,6 +47,7 @@ const formatDate = (value) => {
 export default function Dashboard() {
     const [activeTab, setActiveTab] = useState("Overview");
     const [data, setData] = useState({ invoices: [], customers: [], items: [] });
+    const [collectionSummary, setCollectionSummary] = useState({ dueToday: 0, overdue: 0, followupsPending: 0 });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(false);
     const [userName, setUserName] = useState("there");
@@ -56,12 +57,14 @@ export default function Dashboard() {
         try {
             setLoading(true);
             setError(false);
-            const [invoiceResult, customerResult, itemResult] = await Promise.all([
+            const [invoiceResult, customerResult, itemResult, collectionResult] = await Promise.all([
                 fetch("/api/invoices").then(parseResponse),
                 fetch("/api/customers").then(parseResponse),
                 fetch("/api/items?limit=100").then(parseResponse),
+                fetch("/api/collections").then(parseResponse),
             ]);
             setData({ invoices: invoiceResult.data || [], customers: customerResult.data || [], items: itemResult.data || [] });
+            setCollectionSummary(collectionResult.summary || { dueToday: 0, overdue: 0, followupsPending: 0 });
         } catch (loadError) {
             console.error("Failed to load dashboard:", loadError);
             setError(true);
@@ -177,6 +180,20 @@ export default function Dashboard() {
                         <p className="mt-2 text-xs text-slate-400">{detail}</p>
                     </article>
                 )}
+            </section>
+
+            <section className="grid gap-4 sm:grid-cols-3">
+                {[
+                    ["Due today", collectionSummary.dueToday, "text-blue-700", "bg-blue-50"],
+                    ["Overdue", collectionSummary.overdue, "text-rose-700", "bg-rose-50"],
+                    ["Follow-ups pending", collectionSummary.followupsPending, "text-orange-700", "bg-orange-50"],
+                ].map(([label, value, color, bg]) => (
+                    <Link key={label} href="/dashboard/collection" className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-blue-200 hover:shadow-md">
+                        <p className="text-sm font-medium text-slate-500">{label}</p>
+                        <p className={`mt-2 text-3xl font-bold ${color}`}>{loading ? "--" : value}</p>
+                        <p className="mt-1 text-xs text-slate-400">Open collections</p>
+                    </Link>
+                ))}
             </section>
 
             <section className="grid gap-6 xl:grid-cols-[1.55fr_1fr]">

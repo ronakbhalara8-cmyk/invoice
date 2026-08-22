@@ -197,6 +197,14 @@ export async function POST(request) {
       const result = await client.query(insertQuery, insertValues);
       const invoiceId = result.rows[0]?.id;
 
+      await client.query(
+        `INSERT INTO invoice_followups (
+          organization_id, invoice_id, customer_id, status, next_followup_date
+        ) VALUES ($1, $2, $3, 'PENDING', CURRENT_DATE + 15)
+         ON CONFLICT DO NOTHING`,
+        [auth.organizationId, invoiceId, customer_id || null],
+      );
+
       await client.query('COMMIT');
 
       return NextResponse.json({

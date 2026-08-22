@@ -14,7 +14,7 @@ import {
   ChevronLeft,
   X,
   Users
-  , Banknote
+  , Banknote, ClipboardCheck
 } from 'lucide-react';
 
 export default function Sidebar({ isOpen, onClose, isCollapsed, onToggle }) {
@@ -50,6 +50,7 @@ export default function Sidebar({ isOpen, onClose, isCollapsed, onToggle }) {
     { name: 'Customers', href: '/dashboard/customer', icon: Users },
     { name: 'Invoice', href: '/dashboard/invoice', icon: FileText },
     { name: 'Payments', href: '/dashboard/payment', icon: Banknote },
+    { name: 'Follow-ups', href: '/dashboard/collection', icon: ClipboardCheck },
     { name: 'Quotation', href: '/dashboard/quotation', icon: FileCheck2 },
     { name: 'Reports', href: '/dashboard/report', icon: BarChart3 },
   ];
