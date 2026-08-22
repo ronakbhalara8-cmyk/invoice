@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { FilePlus2, FileText } from 'lucide-react';
+import { FilePlus2, FileText, Search } from 'lucide-react';
 import InvoiceForm from '@/components/invoices/InvoiceForm';
 import InvoiceList from '@/components/invoices/InvoiceList';
 import { downloadInvoicePdf } from '@/components/invoices/InvoicePDF';
@@ -26,6 +26,7 @@ function InvoicePageContent() {
     const [showForm, setShowForm] = useState(false);
     const [invoices, setInvoices] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState('');
 
     const loadInvoices = async () => {
         try {
@@ -61,6 +62,17 @@ function InvoicePageContent() {
         setShowForm(false);
     };
 
+    const filteredInvoices = invoices.filter((invoice) => {
+        const searchValue = searchTerm.trim().toLowerCase();
+        if (!searchValue) return true;
+
+        return [
+            invoice.invoice_number,
+            invoice.customer_name,
+            invoice.created_at,
+        ].some((value) => String(value || '').toLowerCase().includes(searchValue));
+    });
+
     const handleDownload = (invoice) => {
         downloadInvoicePdf({
             ...invoice,
@@ -81,9 +93,20 @@ function InvoicePageContent() {
                         <div className="flex flex-col font-sans gap-4 md:flex-row md:items-center md:justify-between">
                             <div>
                                 <h1 className="text-2xl font-bold text-gray-900">Invoices</h1>
-                                <p className="mt-1 text-sm text-gray-500">{invoices.length} invoices • Manage your invoices and track payments efficiently</p>
+                                <p className="mt-1 text-sm text-gray-500">{filteredInvoices.length} invoices • Manage your invoices and track payments efficiently</p>
                             </div>
                             <div className="flex flex-wrap items-center gap-3">
+                                <label className="flex min-w-0 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-500 shadow-sm focus-within:border-blue-500">
+                                    <Search className="h-4 w-4 shrink-0 text-slate-400" />
+                                    <span className="sr-only">Search invoices</span>
+                                    <input
+                                        type="search"
+                                        value={searchTerm}
+                                        onChange={(event) => setSearchTerm(event.target.value)}
+                                        placeholder="Search invoices..."
+                                        className="w-48 min-w-0 bg-transparent text-slate-900 outline-none placeholder:text-slate-400"
+                                    />
+                                </label>
                                 <button
                                     onClick={() => setShowForm(true)}
                                     className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-blue-700"
@@ -95,7 +118,7 @@ function InvoicePageContent() {
                         </div>
                     </div>
                     <InvoiceList
-                        invoices={invoices}
+                        invoices={filteredInvoices}
                         loading={loading}
                         onRefresh={loadInvoices}
                         onDownload={handleDownload}
