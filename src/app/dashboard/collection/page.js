@@ -139,6 +139,12 @@ export default function CollectionsPage() {
         if (saved) setEditingRow(null);
     };
 
+    const hasEditorChanges = editingRow && (
+        editForm.status !== (editingRow.followup_status || 'PENDING')
+        || editForm.nextFollowupDate !== (dateInputValue(editingRow.next_followup_date) || '')
+        || editForm.notes !== (editingRow.notes || '')
+    );
+
     const openHistory = async (row) => {
         setHistoryInvoice(row);
         try {
@@ -386,7 +392,7 @@ ${senderDetails}`;
                             </div>
                             <div className="mt-6 flex justify-end gap-3">
                                 <button type="button" onClick={() => setEditingRow(null)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50">Cancel</button>
-                                <button type="submit" disabled={saving === editingRow.invoice_id} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">
+                                <button type="submit" disabled={!hasEditorChanges || saving === editingRow.invoice_id} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60">
                                     {saving === editingRow.invoice_id ? 'Saving...' : 'Save changes'}
                                 </button>
                             </div>
